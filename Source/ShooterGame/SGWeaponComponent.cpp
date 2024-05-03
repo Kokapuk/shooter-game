@@ -57,6 +57,11 @@ void USGWeaponComponent::ServerFire_Implementation()
 
 	HitActor->TakeDamage(HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage,
 	                     FDamageEvent(), OwningCharacter->GetController(), OwningCharacter);
+
+	ASGCharacter* Character = Cast<ASGCharacter>(HitActor);
+	if (!IsValid(Character)) return;
+
+	Character->MultiPlayHitReactMontage(HitResult.BoneName);
 }
 
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
@@ -109,7 +114,7 @@ void USGWeaponComponent::MultiReload_Implementation()
 void USGWeaponComponent::PlayFireAnimations() const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
-	
+
 	if (OwningCharacter && OwningCharacter->IsLocallyControlled())
 	{
 		UAnimInstance* ArmsAnimInstance = OwningCharacter->GetArmsMesh()->GetAnimInstance();
@@ -140,7 +145,7 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	const AActor* HitActor = HitResult.GetActor();
-	
+
 	if (OwningCharacter && OwningCharacter->IsLocallyControlled())
 	{
 		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetFirstPersonWeaponMesh();
@@ -148,11 +153,11 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 		if (IsValid(WeaponMesh))
 		{
 			GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
-										   UKismetMathLibrary::FindLookAtRotation(
-											   WeaponMesh->GetComponentLocation(),
-											   IsValid(HitResult.Actor.Get())
-												   ? HitResult.Location
-												   : HitResult.TraceEnd));
+			                               UKismetMathLibrary::FindLookAtRotation(
+				                               WeaponMesh->GetComponentLocation(),
+				                               IsValid(HitResult.Actor.Get())
+					                               ? HitResult.Location
+					                               : HitResult.TraceEnd));
 		}
 	}
 	else if (!OwningCharacter->IsLocallyControlled())
@@ -162,11 +167,11 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 		if (IsValid(WeaponMesh))
 		{
 			GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
-										   UKismetMathLibrary::FindLookAtRotation(
-											   WeaponMesh->GetComponentLocation(),
-											   IsValid(HitActor)
-												   ? HitResult.Location
-												   : HitResult.TraceEnd));
+			                               UKismetMathLibrary::FindLookAtRotation(
+				                               WeaponMesh->GetComponentLocation(),
+				                               IsValid(HitActor)
+					                               ? HitResult.Location
+					                               : HitResult.TraceEnd));
 		}
 	}
 }
@@ -175,13 +180,13 @@ void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	const AActor* HitActor = HitResult.GetActor();
-	
+
 	if (IsValid(HitActor) && IsValid(Equipped->BodyImpactCue) && IsValid(Equipped->SurfaceImpactCue))
 	{
 		UGameplayStatics::PlaySoundAtLocation(OwningCharacter,
-											  HitActor->CanBeDamaged()
-												  ? Equipped->BodyImpactCue
-												  : Equipped->SurfaceImpactCue, HitResult.Location);
+		                                      HitActor->CanBeDamaged()
+			                                      ? Equipped->BodyImpactCue
+			                                      : Equipped->SurfaceImpactCue, HitResult.Location);
 
 		UParticleSystem* ImpactParticles = nullptr;
 
@@ -192,7 +197,7 @@ void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
 		else ImpactParticles = Equipped->SurfaceImpactParticles;
 
 		UGameplayStatics::SpawnEmitterAtLocation(OwningCharacter, ImpactParticles, HitResult.Location,
-												 HitResult.Normal.Rotation());
+		                                         HitResult.Normal.Rotation());
 	}
 }
 

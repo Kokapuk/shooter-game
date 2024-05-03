@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SGPlayerState.h"
 #include "SGWeaponComponent.h"
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
@@ -28,6 +29,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	                         AActor* DamageCauser) override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
@@ -54,6 +56,12 @@ public:
 	UFUNCTION(BlueprintPure)
 	float GetHealth() const { return Health; }
 
+	UFUNCTION(BlueprintPure)
+	ETeam GetTeam() const;
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MultiPlayHitReactMontage(const FName& HitBoneName);
+
 protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	UCameraComponent* Camera;
@@ -75,6 +83,9 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, VisibleInstanceOnly)
 	float Health;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UAnimMontage* HitReactMontage;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 

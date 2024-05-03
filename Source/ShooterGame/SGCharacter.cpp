@@ -1,5 +1,6 @@
 #include "SGCharacter.h"
 
+#include "SGPlayerState.h"
 #include "SGWeaponComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
@@ -92,13 +93,24 @@ void ASGCharacter::Tick(float DeltaSeconds)
 	Camera->SetRelativeLocation(NewCameraLocation);
 }
 
+bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
+                                    AActor* DamageCauser) const
+{
+	const ASGCharacter* Damager = Cast<ASGCharacter>(DamageCauser);
+	if (Damager && Damager->GetTeam() == GetTeam()) return false;
+	
+	return Health > 0.f && Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+}
+
 float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
                                AActor* DamageCauser)
 {
-	if (!ShouldTakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser)) return 0.f;
-	Health -= DamageAmount;
+	const float ActualDamage = FMath::Clamp(DamageAmount, 0.f, Health);
+	if (!ShouldTakeDamage(ActualDamage, DamageEvent, EventInstigator, DamageCauser)) return 0.f;
 
-	return DamageAmount;
+	Health -= ActualDamage;
+
+	return ActualDamage;
 }
 
 void ASGCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
@@ -113,6 +125,21 @@ void ASGCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
 	TargetCameraHeight = BaseEyeHeight;
+}
+
+ETeam ASGCharacter::GetTeam() const
+{
+	const ASGPlayerState* ControllingPlayerState = GetPlayerState<ASGPlayerState>();
+
+	return IsValid(ControllingPlayerState) ? ControllingPlayerState->GetTeam() : ETeam::None;
+}
+
+void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!IsValid(AnimInstance) || !IsValid(HitReactMontage)) return;
+
+	AnimInstance->Montage_Play(HitReactMontage);
 }
 
 void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
