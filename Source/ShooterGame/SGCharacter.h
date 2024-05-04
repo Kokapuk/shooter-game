@@ -93,7 +93,10 @@ protected:
 	void MoveRight(const float Value) { AddMovementInput(GetActorRightVector(), Value); };
 
 	UFUNCTION(BlueprintCallable)
-	void Fire();
+	void StartFire();
+
+	UFUNCTION(BlueprintCallable)
+	void StopFire();
 
 	UFUNCTION(BlueprintCallable)
 	void Reload();

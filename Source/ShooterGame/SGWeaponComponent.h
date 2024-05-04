@@ -17,34 +17,39 @@ public:
 	USGWeaponComponent();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(BlueprintCallable)
-	void Equip(USGWeaponDataAsset* Weapon) { ServerEquip(Weapon); }
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Equip")
+	void ServerEquip(USGWeaponDataAsset* Weapon);
 
 	UFUNCTION(BlueprintPure)
 	USGWeaponDataAsset* GetEquipped() const { return Equipped; }
 
-	UFUNCTION(BlueprintCallable)
-	void Fire() { ServerFire(); }
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="StartFire")
+	void ServerStartFire();
 
-	UFUNCTION(BlueprintCallable)
-	void Reload() { ServerReload(); }
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="StopFire")
+	void ServerStopFire();
+
+	UFUNCTION(BlueprintCallable, DisplayName="Fire", BlueprintAuthorityOnly)
+	void AuthFire();
+
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Reload")
+	void ServerReload();
+
+	UFUNCTION(BlueprintPure)
+	FVector GetFireDirection() const;
 
 protected:
 	UPROPERTY(ReplicatedUsing=OnRep_Equipped)
 	USGWeaponDataAsset* Equipped;
 
-	UFUNCTION(Server, Unreliable)
-	void ServerEquip(USGWeaponDataAsset* Weapon);
-
-	UFUNCTION(Server, Unreliable)
-	void ServerFire();
+	bool bIsAutomaticallyFiring;
+	float TimeToFire;
+	float ShootingError;
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiFire(const FHitResult& HitResult);
-
-	UFUNCTION(Server, Unreliable)
-	void ServerReload();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiReload();

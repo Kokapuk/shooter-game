@@ -158,20 +158,28 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction<FCrouchDelegate>("Crouch", IE_Pressed, this, &ACharacter::Crouch, false);
 	PlayerInputComponent->BindAction<FCrouchDelegate>("Crouch", IE_Released, this, &ACharacter::UnCrouch, false);
 
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::Fire);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::StartFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASGCharacter::StopFire);
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::Reload);
 }
 
-void ASGCharacter::Fire()
+void ASGCharacter::StartFire()
 {
 	if (!IsValid(Weapon)) return;
 
-	Weapon->Fire();
+	Weapon->ServerStartFire();
+}
+
+void ASGCharacter::StopFire()
+{
+	if (!IsValid(Weapon)) return;
+
+	Weapon->ServerStopFire();
 }
 
 void ASGCharacter::Reload()
 {
 	if (!IsValid(Weapon)) return;
 
-	Weapon->Reload();
+	Weapon->ServerReload();
 }

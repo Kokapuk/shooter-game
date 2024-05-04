@@ -3,6 +3,7 @@
 #include "SGCharacter.h"
 #include "SGWeaponDataAsset.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -11,7 +12,9 @@
 USGWeaponComponent::USGWeaponComponent()
 {
 	Equipped = nullptr;
+
 	SetIsReplicatedByDefault(true);
+	PrimaryComponentTick.bCanEverTick = true;
 }
 
 void USGWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -21,15 +24,55 @@ void USGWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(USGWeaponComponent, Equipped);
 }
 
+void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+                                       FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (GetOwner()->HasAuthority() && IsValid(Equipped) && !bIsAutomaticallyFiring)
+	{
+		ShootingError = FMath::Clamp(
+			ShootingError - (Equipped->MaxSprayShootingError / Equipped->MaxShootingErrorRecoveryTime) * DeltaTime,
+			0.f, Equipped->MaxSprayShootingError);
+	}
+
+	if (GetOwner()->HasAuthority() && bIsAutomaticallyFiring && IsValid(Equipped) && TimeToFire == 0.f)
+	{
+		AuthFire();
+	}
+	else if (IsValid(Equipped) && TimeToFire > 0.f)
+	{
+		TimeToFire = FMath::Clamp(TimeToFire - DeltaTime, 0.f, Equipped->TimeBetweenShots);
+	}
+}
+
 void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 {
+	bIsAutomaticallyFiring = false;
+	TimeToFire = 0.f;
+	ShootingError = 0.f;
 	Equipped = Weapon;
 	OnRep_Equipped();
 }
 
-void USGWeaponComponent::ServerFire_Implementation()
+void USGWeaponComponent::ServerStartFire_Implementation()
 {
-	if (Equipped == nullptr) return;
+	if (!IsValid(Equipped)) return;
+
+	if (Equipped->bIsAutomatic) bIsAutomaticallyFiring = true;
+	else if (TimeToFire == 0.f) AuthFire();
+}
+
+void USGWeaponComponent::ServerStopFire_Implementation()
+{
+	bIsAutomaticallyFiring = false;
+}
+
+void USGWeaponComponent::AuthFire()
+{
+	if (!GetOwner()->HasAuthority() || Equipped == nullptr || TimeToFire > 0.f) return;
+
+	TimeToFire = Equipped->TimeBetweenShots;
 
 	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	if (!IsValid(OwningCharacter)) return;
@@ -37,11 +80,9 @@ void USGWeaponComponent::ServerFire_Implementation()
 	const UCameraComponent* Camera = OwningCharacter->GetCamera();
 	if (Camera == nullptr) return;
 
-	const FVector End = Camera->GetComponentLocation() + (UKismetMathLibrary::GetForwardVector(
-		OwningCharacter->GetBaseAimRotation()) * 10000.f);
+	const FVector End = Camera->GetComponentLocation() + GetFireDirection() * 10000.f;
 
 	FHitResult HitResult;
-
 	const bool bHit = UKismetSystemLibrary::LineTraceSingle(OwningCharacter, Camera->GetComponentLocation(), End,
 	                                                        UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
 	                                                        false,
@@ -49,6 +90,9 @@ void USGWeaponComponent::ServerFire_Implementation()
 	                                                        FLinearColor::Red, FLinearColor::Green, .5f);
 
 	MultiFire(HitResult);
+
+	ShootingError = FMath::Clamp(ShootingError + Equipped->MaxSprayShootingError / 5, 0.f,
+	                             Equipped->MaxSprayShootingError);
 
 	if (!bHit) return;
 
@@ -62,6 +106,26 @@ void USGWeaponComponent::ServerFire_Implementation()
 	if (!IsValid(Character)) return;
 
 	Character->MultiPlayHitReactMontage(HitResult.BoneName);
+}
+
+FVector USGWeaponComponent::GetFireDirection() const
+{
+	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	if (!IsValid(OwningCharacter)) return FVector::ZeroVector;
+
+	const FRotator AimRotation = OwningCharacter->GetBaseAimRotation();
+	const float MovingShootingError = OwningCharacter->GetVelocity().Size() / OwningCharacter->GetCharacterMovement()->
+		MaxWalkSpeed * Equipped->MaxMovingShootingError;
+
+	FVector AimDirection = UKismetMathLibrary::GetForwardVector(AimRotation);
+	const float RandomHorizontalAngle = FMath::FRandRange(-ShootingError - MovingShootingError,
+	                                                      ShootingError + MovingShootingError);
+	const float RandomVerticalAngle = FMath::FRandRange(-ShootingError - MovingShootingError,
+	                                                    ShootingError + MovingShootingError);
+	AimDirection = AimDirection.RotateAngleAxis(RandomHorizontalAngle, UKismetMathLibrary::GetUpVector(AimRotation));
+	AimDirection = AimDirection.RotateAngleAxis(RandomVerticalAngle, UKismetMathLibrary::GetRightVector(AimRotation));
+
+	return AimDirection;
 }
 
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
