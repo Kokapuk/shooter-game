@@ -1,19 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SGCharacter.h"
 #include "GameFramework/PlayerState.h"
 #include "SGPlayerState.generated.h"
 
-class ASGCharacter;
+enum class ETeam : uint8;
 
-UENUM(BlueprintType)
-enum class ETeam : uint8
-{
-	None,
-	Red,
-	Blue
-};
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDie);
 
 UCLASS()
 class SHOOTERGAME_API ASGPlayerState : public APlayerState
@@ -21,30 +14,24 @@ class SHOOTERGAME_API ASGPlayerState : public APlayerState
 	GENERATED_BODY()
 
 public:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	UPROPERTY(BlueprintAssignable)
+	FOnDie OnDie;
 
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="AssingTeam")
-	void AuthAssignTeam(const ETeam NewTeam);
-
-	UFUNCTION(BlueprintPure)
-	ETeam GetTeam() const { return Team; }
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Register Player In Team")
+	void ServerRegisterPlayerInTeam(const ETeam Team);
 
 	UFUNCTION(BlueprintPure)
-	ASGCharacter* GetControlledCharacter() const { return GetPawn<ASGCharacter>(); }
+	ETeam GetTeam() const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiHandleDie();
 
 	UFUNCTION(BlueprintPure)
-	UMaterialInterface* GetMaterialByTeam() const;
+	bool IsDead() const { return bIsDead; }
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Reset")
+	void AuthReset();
 
 protected:
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	UMaterialInterface* NoTeamMaterial;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	UMaterialInterface* RedTeamMaterial;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	UMaterialInterface* BlueTeamMaterial;
-
-	UPROPERTY(Replicated, BlueprintReadOnly, VisibleInstanceOnly)
-	ETeam Team;
+	uint8 bIsDead : 1;
 };

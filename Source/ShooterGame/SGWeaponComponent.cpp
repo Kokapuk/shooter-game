@@ -99,13 +99,16 @@ void USGWeaponComponent::AuthFire()
 	AActor* HitActor = HitResult.GetActor();
 	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
 
+	ASGCharacter* Character = Cast<ASGCharacter>(HitActor);
+	
+	if (IsValid(Character))
+	{
+		Character->MultiPlayHitReactMontage(HitResult.BoneName);
+	}
+	
 	HitActor->TakeDamage(HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage,
 	                     FDamageEvent(), OwningCharacter->GetController(), OwningCharacter);
 
-	ASGCharacter* Character = Cast<ASGCharacter>(HitActor);
-	if (!IsValid(Character)) return;
-
-	Character->MultiPlayHitReactMontage(HitResult.BoneName);
 }
 
 FVector USGWeaponComponent::GetFireDirection() const

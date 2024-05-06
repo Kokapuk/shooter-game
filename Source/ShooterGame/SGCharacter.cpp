@@ -1,5 +1,7 @@
 #include "SGCharacter.h"
 
+#include "SGGameMode.h"
+#include "SGGameState.h"
 #include "SGPlayerState.h"
 #include "SGWeaponComponent.h"
 #include "Animation/AnimInstance.h"
@@ -74,6 +76,7 @@ void ASGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASGCharacter, Health);
+	DOREPLIFETIME(ASGCharacter, bIsDead);
 }
 
 void ASGCharacter::BeginPlay()
@@ -81,6 +84,14 @@ void ASGCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	Health = MaxHealth;
+
+	const UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	ASGGameState* GameState = World->GetGameState<ASGGameState>();
+	if (!IsValid(GameState)) return;
+
+	GameState->OnMatchBegin.AddUniqueDynamic(this, &ASGCharacter::HandleMatchBegin);
 }
 
 void ASGCharacter::Tick(float DeltaSeconds)
@@ -96,9 +107,16 @@ void ASGCharacter::Tick(float DeltaSeconds)
 bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
                                     AActor* DamageCauser) const
 {
+	const ASGGameMode* GameMode = Cast<ASGGameMode>(UGameplayStatics::GetGameMode(this));
+	if (!IsValid(GameMode)) return false;
+
 	const ASGCharacter* Damager = Cast<ASGCharacter>(DamageCauser);
-	if (Damager && Damager->GetTeam() == GetTeam()) return false;
-	
+
+	if (Damager && (!GameMode->IsFriendlyFireAllowed() && Damager->GetTeam() == GetTeam()))
+	{
+		return false;
+	}
+
 	return Health > 0.f && Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
@@ -109,6 +127,7 @@ float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	if (!ShouldTakeDamage(ActualDamage, DamageEvent, EventInstigator, DamageCauser)) return 0.f;
 
 	Health -= ActualDamage;
+	if (Health == 0.f) AuthDie();
 
 	return ActualDamage;
 }
@@ -129,9 +148,28 @@ void ASGCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 
 ETeam ASGCharacter::GetTeam() const
 {
-	const ASGPlayerState* ControllingPlayerState = GetPlayerState<ASGPlayerState>();
+	const UWorld* World = GetWorld();
+	if (!IsValid(World)) return ETeam::None;
 
-	return IsValid(ControllingPlayerState) ? ControllingPlayerState->GetTeam() : ETeam::None;
+	const ASGGameState* GameState = World->GetGameState<ASGGameState>();
+	if (!IsValid(GameState)) return ETeam::None;
+
+	const ASGPlayerState* Player = GetPlayerState<ASGPlayerState>();
+	if (!IsValid(Player)) return ETeam::None;
+
+	return Player->GetTeam();
+}
+
+void ASGCharacter::AuthReset(const AActor* PlayerStart)
+{
+	if (!HasAuthority()) return;
+
+	Health = MaxHealth;
+	bIsDead = false;
+	
+	SetActorLocation(PlayerStart->GetActorLocation());
+	MultiResetAnimations();
+	MultiSetDeadCollision(false);
 }
 
 void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
@@ -182,4 +220,73 @@ void ASGCharacter::Reload()
 	if (!IsValid(Weapon)) return;
 
 	Weapon->ServerReload();
+}
+
+void ASGCharacter::AuthDie()
+{
+	if (!HasAuthority()) return;
+
+	bIsDead = true;
+	OnRep_IsDead();
+
+	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
+	
+	if (IsValid(DetailedPlayerState))
+	{
+		DetailedPlayerState->MultiHandleDie();
+	}
+
+	MultiSetDeadCollision(true);
+
+	// UWorld* World = GetWorld();
+	// if (!IsValid(World)) return;
+	//
+	// const AGameModeBase* GameMode = UGameplayStatics::GetGameMode(this);
+	// if (!IsValid(GameMode)) return;
+	//
+	// ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, GetActorLocation(), GetActorRotation());
+	// GetController()->Possess(SpectatorPawn);
+}
+
+void ASGCharacter::MultiResetAnimations_Implementation()
+{
+	UAnimInstance* MeshAnimInstance = GetMesh()->GetAnimInstance();
+	if (IsValid(MeshAnimInstance)) MeshAnimInstance->StopAllMontages(false);
+}
+
+void ASGCharacter::MultiSetDeadCollision_Implementation(bool bNewDeadCollision)
+{
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, bNewDeadCollision ? ECR_Ignore : ECR_Block);
+	GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, bNewDeadCollision ? ECR_Ignore : ECR_Block);
+}
+
+void ASGCharacter::HandleMatchBegin()
+{
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (!IsValid(CharacterMesh)) return;
+
+	const ETeam Team = GetTeam();
+
+	if (Team == ETeam::Red)
+	{
+		CharacterMesh->SetMaterial(0, RedTeamMaterial);
+		ArmsMesh->SetMaterial(0, RedTeamMaterial);
+	}
+	else if (Team == ETeam::Blue)
+	{
+		CharacterMesh->SetMaterial(0, BlueTeamMaterial);
+		ArmsMesh->SetMaterial(0, BlueTeamMaterial);
+	}
+}
+
+void ASGCharacter::OnRep_IsDead()
+{
+	if (!bIsDead) return;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	
+	if (IsValid(AnimInstance) && IsValid(DeathMontage))
+	{
+		AnimInstance->Montage_Play(DeathMontage);
+	}
 }

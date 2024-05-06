@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SGPlayerState.h"
+#include "SGGameState.h"
 #include "SGWeaponComponent.h"
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
@@ -29,7 +29,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
+	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	                              AActor* DamageCauser) const override;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	                         AActor* DamageCauser) override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
@@ -57,35 +58,53 @@ public:
 	float GetHealth() const { return Health; }
 
 	UFUNCTION(BlueprintPure)
+	bool IsDead() const { return bIsDead; }
+
+	UFUNCTION(BlueprintPure)
 	ETeam GetTeam() const;
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiPlayHitReactMontage(const FName& HitBoneName);
 
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Reset")
+	void AuthReset(const AActor* PlayerStart);
+
 protected:
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)
 	UCameraComponent* Camera;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)
 	USkeletalMeshComponent* ArmsMesh;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)
 	USkeletalMeshComponent* FirstPersonWeaponMesh;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)
 	USkeletalMeshComponent* ThirdPersonWeaponMesh;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)
 	USGWeaponComponent* Weapon;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)
 	float MaxHealth;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, VisibleInstanceOnly)
+	UPROPERTY(Replicated, VisibleInstanceOnly)
 	float Health;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_IsDead, VisibleInstanceOnly)
+	uint8 bIsDead : 1;
+
+	UPROPERTY(EditDefaultsOnly)
 	UAnimMontage* HitReactMontage;
+
+	UPROPERTY(EditDefaultsOnly)
+	UAnimMontage* DeathMontage;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMaterialInstance* RedTeamMaterial;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMaterialInterface* BlueTeamMaterial;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
@@ -101,6 +120,21 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void Reload();
 
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Die")
+	void AuthDie();
+
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, DisplayName="Reset Animations")
+	void MultiResetAnimations();
+
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
+	void MultiSetDeadCollision(bool bNewDeadCollision);
+
 private:
 	float TargetCameraHeight;
+
+	UFUNCTION()
+	void HandleMatchBegin();
+
+	UFUNCTION()
+	void OnRep_IsDead();
 };

@@ -1,54 +1,39 @@
 #include "SGPlayerState.h"
 
-#include "Net/UnrealNetwork.h"
+#include "SGGameState.h"
+#include "Kismet/GameplayStatics.h"
 
-void ASGPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void ASGPlayerState::ServerRegisterPlayerInTeam_Implementation(const ETeam Team)
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	const UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
 
-	DOREPLIFETIME(ASGPlayerState, Team);
+	ASGGameState* GameState = World->GetGameState<ASGGameState>();
+	if (!IsValid(GameState)) return;
+
+	GameState->AuthRegisterPlayerInTeam(this, Team);
 }
 
-void ASGPlayerState::AuthAssignTeam(const ETeam NewTeam)
+ETeam ASGPlayerState::GetTeam() const
+{
+	const UWorld* World = GetWorld();
+	if (!IsValid(World)) return ETeam::None;
+
+	const ASGGameState* GameState = World->GetGameState<ASGGameState>();
+	if (!IsValid(GameState)) return ETeam::None;
+
+	return GameState->GetPlayerTeam(this);
+}
+
+void ASGPlayerState::AuthReset()
 {
 	if (!HasAuthority()) return;
-
-	Team = NewTeam;
+	
+	bIsDead = false;
 }
 
-UMaterialInterface* ASGPlayerState::GetMaterialByTeam() const
+void ASGPlayerState::MultiHandleDie_Implementation()
 {
-	switch (Team)
-	{
-	case ETeam::Red:
-		return RedTeamMaterial;
-	case ETeam::Blue:
-		return BlueTeamMaterial;
-	default:
-		return NoTeamMaterial;
-	}
+	bIsDead = true;
+	OnDie.Broadcast();
 }
-
-// void ASGPlayerState::OnRep_Team()
-// {
-// 	const ASGCharacter* ControlledCharacter = GetControlledCharacter();
-// 	if (!IsValid(ControlledCharacter)) return;
-//
-// 	UMaterialInterface* CurrentTeamMaterial = GetMaterialByTeam();
-// 	if (!IsValid(CurrentTeamMaterial)) return;
-//
-// 	if (!ControlledCharacter->IsLocallyControlled())
-// 	{
-// 		USkeletalMeshComponent* ControlledCharacterMesh = ControlledCharacter->GetMesh();
-// 		if (!IsValid(ControlledCharacterMesh)) return;
-//
-// 		ControlledCharacterMesh->SetMaterial(0, CurrentTeamMaterial);
-// 	}
-// 	else
-// 	{
-// 		USkeletalMeshComponent* ControlledCharacterMesh = ControlledCharacter->GetArmsMesh();
-// 		if (!IsValid(ControlledCharacterMesh)) return;
-//
-// 		ControlledCharacterMesh->SetMaterial(0, CurrentTeamMaterial);
-// 	}
-// }

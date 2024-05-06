@@ -13,6 +13,9 @@ public:
 	virtual void AddYawInput(float Value) override;
 	virtual void AddPitchInput(float Value) override;
 
+	UFUNCTION(Client, Unreliable)
+	void ClientResetControlRotation(const FRotator& NewRotation);
+
 private:
 	float Sensitivity = .6f;
 };

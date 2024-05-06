@@ -25,10 +25,10 @@ public:
 	UFUNCTION(BlueprintPure)
 	USGWeaponDataAsset* GetEquipped() const { return Equipped; }
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="StartFire")
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Start Fire")
 	void ServerStartFire();
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="StopFire")
+	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Stop Fire")
 	void ServerStopFire();
 
 	UFUNCTION(BlueprintCallable, DisplayName="Fire", BlueprintAuthorityOnly)
