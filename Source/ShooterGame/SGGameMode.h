@@ -20,6 +20,11 @@ public:
 	virtual void StartMatch() override;
 
 	bool IsFriendlyFireAllowed() const { return bIsFriendlyFireAllowed; }
+
+	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
+	void FinishRound();
+	
+	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
 	void ResetPlayers();
 
 protected:

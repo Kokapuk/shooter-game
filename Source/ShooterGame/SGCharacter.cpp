@@ -10,6 +10,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/InputSettings.h"
+#include "GameFramework/SpectatorPawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
@@ -85,11 +86,8 @@ void ASGCharacter::BeginPlay()
 
 	Health = MaxHealth;
 
-	const UWorld* World = GetWorld();
-	if (!IsValid(World)) return;
-
-	ASGGameState* GameState = World->GetGameState<ASGGameState>();
-	if (!IsValid(GameState)) return;
+	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
+	check(IsValid(GameState))
 
 	GameState->OnMatchBegin.AddUniqueDynamic(this, &ASGCharacter::HandleMatchBegin);
 }
@@ -107,12 +105,13 @@ void ASGCharacter::Tick(float DeltaSeconds)
 bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
                                     AActor* DamageCauser) const
 {
-	const ASGGameMode* GameMode = Cast<ASGGameMode>(UGameplayStatics::GetGameMode(this));
-	if (!IsValid(GameMode)) return false;
+	const ASGGameMode* GameMode = GetWorld()->GetAuthGameMode<ASGGameMode>();
+	check(IsValid(GameMode))
 
 	const ASGCharacter* Damager = Cast<ASGCharacter>(DamageCauser);
+	check(IsValid(Damager))
 
-	if (Damager && (!GameMode->IsFriendlyFireAllowed() && Damager->GetTeam() == GetTeam()))
+	if ((!GameMode->IsFriendlyFireAllowed() && Damager->GetTeam() == GetTeam()))
 	{
 		return false;
 	}
@@ -148,14 +147,11 @@ void ASGCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 
 ETeam ASGCharacter::GetTeam() const
 {
-	const UWorld* World = GetWorld();
-	if (!IsValid(World)) return ETeam::None;
-
-	const ASGGameState* GameState = World->GetGameState<ASGGameState>();
-	if (!IsValid(GameState)) return ETeam::None;
+	const ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
+	check(IsValid(GameState))
 
 	const ASGPlayerState* Player = GetPlayerState<ASGPlayerState>();
-	if (!IsValid(Player)) return ETeam::None;
+	check(IsValid(Player))
 
 	return Player->GetTeam();
 }
@@ -166,7 +162,7 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 
 	Health = MaxHealth;
 	bIsDead = false;
-	
+
 	SetActorLocation(PlayerStart->GetActorLocation());
 	MultiResetAnimations();
 	MultiSetDeadCollision(false);
@@ -174,16 +170,16 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 
 void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
 {
+	check(IsValid(HitReactMontage))
+	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (!IsValid(AnimInstance) || !IsValid(HitReactMontage)) return;
+	if (!IsValid(AnimInstance)) return;
 
 	AnimInstance->Montage_Play(HitReactMontage);
 }
 
 void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	check(PlayerInputComponent);
-
 	PlayerInputComponent->BindAxis("MoveForward", this, &ASGCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ASGCharacter::MoveRight);
 
@@ -201,51 +197,26 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::Reload);
 }
 
-void ASGCharacter::StartFire()
-{
-	if (!IsValid(Weapon)) return;
-
-	Weapon->ServerStartFire();
-}
-
-void ASGCharacter::StopFire()
-{
-	if (!IsValid(Weapon)) return;
-
-	Weapon->ServerStopFire();
-}
-
-void ASGCharacter::Reload()
-{
-	if (!IsValid(Weapon)) return;
-
-	Weapon->ServerReload();
-}
-
 void ASGCharacter::AuthDie()
 {
 	if (!HasAuthority()) return;
 
-	bIsDead = true;
-	OnRep_IsDead();
-
-	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
-	
-	if (IsValid(DetailedPlayerState))
-	{
-		DetailedPlayerState->MultiHandleDie();
-	}
-
 	MultiSetDeadCollision(true);
 
-	// UWorld* World = GetWorld();
-	// if (!IsValid(World)) return;
-	//
-	// const AGameModeBase* GameMode = UGameplayStatics::GetGameMode(this);
-	// if (!IsValid(GameMode)) return;
-	//
-	// ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, GetActorLocation(), GetActorRotation());
-	// GetController()->Possess(SpectatorPawn);
+	UWorld* World = GetWorld();
+	const AGameModeBase* GameMode = World->GetAuthGameMode<AGameModeBase>();
+
+	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
+	check(IsValid(DetailedPlayerState));
+
+	ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, GetActorLocation(),
+	                                                                  GetActorRotation());
+	GetController()->Possess(SpectatorPawn);
+
+	bIsDead = true;
+	OnRep_IsDead();
+	
+	DetailedPlayerState->MultiHandleDie();
 }
 
 void ASGCharacter::MultiResetAnimations_Implementation()
@@ -254,7 +225,7 @@ void ASGCharacter::MultiResetAnimations_Implementation()
 	if (IsValid(MeshAnimInstance)) MeshAnimInstance->StopAllMontages(false);
 }
 
-void ASGCharacter::MultiSetDeadCollision_Implementation(bool bNewDeadCollision)
+void ASGCharacter::MultiSetDeadCollision_Implementation(const bool bNewDeadCollision)
 {
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, bNewDeadCollision ? ECR_Ignore : ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, bNewDeadCollision ? ECR_Ignore : ECR_Block);
@@ -263,8 +234,6 @@ void ASGCharacter::MultiSetDeadCollision_Implementation(bool bNewDeadCollision)
 void ASGCharacter::HandleMatchBegin()
 {
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
-	if (!IsValid(CharacterMesh)) return;
-
 	const ETeam Team = GetTeam();
 
 	if (Team == ETeam::Red)
@@ -284,7 +253,7 @@ void ASGCharacter::OnRep_IsDead()
 	if (!bIsDead) return;
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	
+
 	if (IsValid(AnimInstance) && IsValid(DeathMontage))
 	{
 		AnimInstance->Montage_Play(DeathMontage);

@@ -11,6 +11,7 @@ void ASGGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASGGameState, ShooterMatchState);
+	DOREPLIFETIME(ASGGameState, RoundState);
 	DOREPLIFETIME(ASGGameState, RedTeamPlayers);
 	DOREPLIFETIME(ASGGameState, BlueTeamPlayers);
 	DOREPLIFETIME(ASGGameState, Spectators);
@@ -20,10 +21,9 @@ void ASGGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority())
-	{
-		OnMatchBegin.AddDynamic(this, &ASGGameState::AuthHandleMatchBegin);
-	}
+	if (!HasAuthority()) return;
+
+	OnMatchBegin.AddDynamic(this, &ASGGameState::AuthHandleMatchBegin);
 }
 
 void ASGGameState::AuthSetMatchState(const EMatchState NewMatchState)
@@ -32,6 +32,14 @@ void ASGGameState::AuthSetMatchState(const EMatchState NewMatchState)
 
 	ShooterMatchState = NewMatchState;
 	OnRep_ShooterMatchState();
+}
+
+void ASGGameState::AuthSetRoundState(const ERoundState NewRoundState)
+{
+	if (!HasAuthority()) return;
+
+	RoundState = NewRoundState;
+	OnRep_RoundState();
 }
 
 TArray<APlayerState*> ASGGameState::GetTeamPlayers(const ETeam Team) const
@@ -112,19 +120,28 @@ void ASGGameState::OnRep_ShooterMatchState()
 	}
 }
 
+void ASGGameState::OnRep_RoundState()
+{
+	switch (RoundState)
+	{
+	case ERoundState::InProgress:
+		OnRoundBegin.Broadcast();
+	case ERoundState::Finished:
+		OnRoundFinish.Broadcast();
+	}
+}
+
 void ASGGameState::AuthHandleMatchBegin()
 {
 	if (!HasAuthority()) return;
 
-	for (int32 i = 0; i < RedTeamPlayers.Num(); ++i)
-	{
-		ASGPlayerState* PlayerState = Cast<ASGPlayerState>(RedTeamPlayers[i]);
-		PlayerState->OnDie.AddUniqueDynamic(this, &ASGGameState::AuthHandlePlayerDie);
-	}
+	TArray<APlayerState*> AllPlayers = GetAllPlayers();
 
-	for (int32 i = 0; i < BlueTeamPlayers.Num(); ++i)
+	for (int32 i = 0; i < AllPlayers.Num(); ++i)
 	{
-		ASGPlayerState* PlayerState = Cast<ASGPlayerState>(BlueTeamPlayers[i]);
+		ASGPlayerState* PlayerState = Cast<ASGPlayerState>(AllPlayers[i]);
+		check(PlayerState)
+
 		PlayerState->OnDie.AddUniqueDynamic(this, &ASGGameState::AuthHandlePlayerDie);
 	}
 }
@@ -132,10 +149,10 @@ void ASGGameState::AuthHandleMatchBegin()
 void ASGGameState::AuthHandlePlayerDie()
 {
 	if (!HasAuthority()) return;
-	
+
 	bool bAreAllRedTeamMembersDead = true;
 	bool bAreAllBlueTeamMembersDead = true;
-	
+
 	for (int32 i = 0; i < RedTeamPlayers.Num(); ++i)
 	{
 		const ASGPlayerState* PlayerState = Cast<ASGPlayerState>(RedTeamPlayers[i]);
@@ -156,11 +173,8 @@ void ASGGameState::AuthHandlePlayerDie()
 
 	if (!bAreAllRedTeamMembersDead && !bAreAllBlueTeamMembersDead) return;
 
-	const UWorld* World = GetWorld();
-	if (!IsValid(World)) return;
-	
-	ASGGameMode* GameMode = World->GetAuthGameMode<ASGGameMode>();
-	if (!IsValid(GameMode)) return;
-	
-	GameMode->ResetPlayers();
+	ASGGameMode* GameMode = GetWorld()->GetAuthGameMode<ASGGameMode>();
+	check(IsValid(GameMode))
+
+	GameMode->FinishRound();
 }

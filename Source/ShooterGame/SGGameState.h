@@ -19,7 +19,19 @@ enum class EMatchState : uint8
 	InProgress
 };
 
+UENUM(BlueprintType)
+enum class ERoundState : uint8
+{
+	None,
+	InProgress,
+	Finished
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMatchBegin);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundBegin);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundFinish);
 
 UCLASS()
 class SHOOTERGAME_API ASGGameState : public AGameState
@@ -30,11 +42,21 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnMatchBegin OnMatchBegin;
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	UPROPERTY(BlueprintAssignable)
+	FOnRoundBegin OnRoundBegin;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnRoundFinish OnRoundFinish;
+
+	virtual
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Set Match State")
 	void AuthSetMatchState(const EMatchState NewMatchState);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Set Round State")
+	void AuthSetRoundState(const ERoundState NewRoundState);
 
 	UFUNCTION(BlueprintPure)
 	EMatchState GetShooterMatchState() const { return ShooterMatchState; }
@@ -55,6 +77,9 @@ protected:
 	UPROPERTY(ReplicatedUsing=OnRep_ShooterMatchState, VisibleInstanceOnly)
 	EMatchState ShooterMatchState;
 
+	UPROPERTY(ReplicatedUsing=OnRep_RoundState, VisibleInstanceOnly)
+	ERoundState RoundState;
+
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	TArray<APlayerState*> RedTeamPlayers;
 
@@ -67,6 +92,9 @@ protected:
 private:
 	UFUNCTION()
 	void OnRep_ShooterMatchState();
+
+	UFUNCTION()
+	void OnRep_RoundState();
 
 	UFUNCTION()
 	void AuthHandleMatchBegin();

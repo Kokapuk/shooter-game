@@ -70,15 +70,15 @@ void USGWeaponComponent::ServerStopFire_Implementation()
 
 void USGWeaponComponent::AuthFire()
 {
-	if (!GetOwner()->HasAuthority() || Equipped == nullptr || TimeToFire > 0.f) return;
+	if (!GetOwner()->HasAuthority() || !IsValid(Equipped) || TimeToFire > 0.f) return;
 
 	TimeToFire = Equipped->TimeBetweenShots;
 
 	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
-	if (!IsValid(OwningCharacter)) return;
+	check(IsValid(OwningCharacter))
 
 	const UCameraComponent* Camera = OwningCharacter->GetCamera();
-	if (Camera == nullptr) return;
+	check(IsValid(Camera))
 
 	const FVector End = Camera->GetComponentLocation() + GetFireDirection() * 10000.f;
 
@@ -99,22 +99,21 @@ void USGWeaponComponent::AuthFire()
 	AActor* HitActor = HitResult.GetActor();
 	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
 
-	ASGCharacter* Character = Cast<ASGCharacter>(HitActor);
-	
-	if (IsValid(Character))
+	ASGCharacter* HitCharacter = Cast<ASGCharacter>(HitActor);
+
+	if (IsValid(HitCharacter))
 	{
-		Character->MultiPlayHitReactMontage(HitResult.BoneName);
+		HitCharacter->MultiPlayHitReactMontage(HitResult.BoneName);
 	}
-	
+
 	HitActor->TakeDamage(HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage,
 	                     FDamageEvent(), OwningCharacter->GetController(), OwningCharacter);
-
 }
 
 FVector USGWeaponComponent::GetFireDirection() const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
-	if (!IsValid(OwningCharacter)) return FVector::ZeroVector;
+	check(IsValid(OwningCharacter))
 
 	const FRotator AimRotation = OwningCharacter->GetBaseAimRotation();
 	const float MovingShootingError = OwningCharacter->GetVelocity().Size() / OwningCharacter->GetCharacterMovement()->
@@ -140,7 +139,7 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 
 void USGWeaponComponent::ServerReload_Implementation()
 {
-	if (Equipped == nullptr) return;
+	if (IsValid(Equipped)) return;
 
 	MultiReload();
 }
@@ -148,8 +147,9 @@ void USGWeaponComponent::ServerReload_Implementation()
 void USGWeaponComponent::MultiReload_Implementation()
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(OwningCharacter))
 
-	if (OwningCharacter && OwningCharacter->IsLocallyControlled())
+	if (OwningCharacter->IsLocallyControlled())
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
 
@@ -180,19 +180,23 @@ void USGWeaponComponent::MultiReload_Implementation()
 
 void USGWeaponComponent::PlayFireAnimations() const
 {
-	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(Equipped->FirstPersonFireMontage))
+	check(IsValid(Equipped->WeaponFireMontage))
 
-	if (OwningCharacter && OwningCharacter->IsLocallyControlled())
+	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(OwningCharacter))
+
+	if (OwningCharacter->IsLocallyControlled())
 	{
 		UAnimInstance* ArmsAnimInstance = OwningCharacter->GetArmsMesh()->GetAnimInstance();
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
 
-		if (IsValid(ArmsAnimInstance) && IsValid(Equipped->FirstPersonFireMontage))
+		if (IsValid(ArmsAnimInstance))
 		{
 			ArmsAnimInstance->Montage_Play(Equipped->FirstPersonFireMontage);
 		}
 
-		if (IsValid(WeaponAnimInstance) && IsValid(Equipped->WeaponFireMontage))
+		if (IsValid(WeaponAnimInstance))
 		{
 			WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
 		}
@@ -201,7 +205,7 @@ void USGWeaponComponent::PlayFireAnimations() const
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetThirdPersonWeaponMesh()->GetAnimInstance();
 
-		if (IsValid(WeaponAnimInstance) && IsValid(Equipped->WeaponFireMontage))
+		if (IsValid(WeaponAnimInstance))
 		{
 			WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
 		}
@@ -211,44 +215,47 @@ void USGWeaponComponent::PlayFireAnimations() const
 void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(OwningCharacter))
+
 	const AActor* HitActor = HitResult.GetActor();
 
-	if (OwningCharacter && OwningCharacter->IsLocallyControlled())
+	if (OwningCharacter->IsLocallyControlled())
 	{
 		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetFirstPersonWeaponMesh();
+		check(IsValid(WeaponMesh))
 
-		if (IsValid(WeaponMesh))
-		{
-			GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
-			                               UKismetMathLibrary::FindLookAtRotation(
-				                               WeaponMesh->GetComponentLocation(),
-				                               IsValid(HitResult.Actor.Get())
-					                               ? HitResult.Location
-					                               : HitResult.TraceEnd));
-		}
+		GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
+		                               UKismetMathLibrary::FindLookAtRotation(
+			                               WeaponMesh->GetComponentLocation(),
+			                               IsValid(HitResult.Actor.Get())
+				                               ? HitResult.Location
+				                               : HitResult.TraceEnd));
 	}
 	else if (!OwningCharacter->IsLocallyControlled())
 	{
 		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetThirdPersonWeaponMesh();
+		check(IsValid(WeaponMesh))
 
-		if (IsValid(WeaponMesh))
-		{
-			GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
-			                               UKismetMathLibrary::FindLookAtRotation(
-				                               WeaponMesh->GetComponentLocation(),
-				                               IsValid(HitActor)
-					                               ? HitResult.Location
-					                               : HitResult.TraceEnd));
-		}
+		GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
+		                               UKismetMathLibrary::FindLookAtRotation(
+			                               WeaponMesh->GetComponentLocation(),
+			                               IsValid(HitActor)
+				                               ? HitResult.Location
+				                               : HitResult.TraceEnd));
 	}
 }
 
 void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
 {
+	check(IsValid(Equipped->BodyImpactCue))
+	check(IsValid(Equipped->SurfaceImpactCue))
+	
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(OwningCharacter)
+	
 	const AActor* HitActor = HitResult.GetActor();
 
-	if (IsValid(HitActor) && IsValid(Equipped->BodyImpactCue) && IsValid(Equipped->SurfaceImpactCue))
+	if (IsValid(HitActor))
 	{
 		UGameplayStatics::PlaySoundAtLocation(OwningCharacter,
 		                                      HitActor->CanBeDamaged()
@@ -271,16 +278,16 @@ void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
 void USGWeaponComponent::OnRep_Equipped() const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
-	if (!IsValid(OwningCharacter)) return;
+	check(OwningCharacter)
 
 	if (OwningCharacter->IsLocallyControlled())
 	{
-		return OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(
+		OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(
 			Equipped == nullptr ? nullptr : Equipped->Mesh);
 	}
 	else
 	{
-		return OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(
+		OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(
 			Equipped == nullptr ? nullptr : Equipped->Mesh);
 	}
 }

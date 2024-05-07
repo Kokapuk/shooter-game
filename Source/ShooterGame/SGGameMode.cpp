@@ -19,34 +19,29 @@ void ASGGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewP
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 
-	ASGGameState* ShooterGameState = GetGameState<ASGGameState>();
-	if (!IsValid(ShooterGameState)) return;
+	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
+	check(IsValid(DetailedGameState))
 
 	APlayerState* Player = NewPlayer->GetPlayerState<APlayerState>();
-	if (!IsValid(Player)) return;
 
-	ShooterGameState->AuthRegisterPlayerInTeam(Player, ETeam::None);
+	DetailedGameState->AuthRegisterPlayerInTeam(Player, ETeam::None);
 }
 
 UClass* ASGGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
 	const ASGPlayerState* PlayerState = InController->GetPlayerState<ASGPlayerState>();
-	
-	if (!IsValid(PlayerState) || PlayerState->GetTeam() == ETeam::None)
-	{
-		return SpectatorClass;
-	}
+	check(IsValid(PlayerState));
 
+	if (PlayerState->GetTeam() == ETeam::None) return SpectatorClass;
 	return DefaultPawnClass;
 }
 
 AActor* ASGGameMode::FindPlayerStart_Implementation(AController* Player, const FString& IncomingName)
 {
 	const ASGPlayerState* PlayerState = Player->GetPlayerState<ASGPlayerState>();
-	if (!IsValid(PlayerState)) return nullptr;
+	check(IsValid(PlayerState));
 
 	APlayerController* PlayerController = Cast<APlayerController>(Player);
-	if (!IsValid(PlayerController)) return nullptr;
 
 	TArray<AActor*> PlayerStarts;
 	UGameplayStatics::GetAllActorsOfClass(this, ASGPlayerStart::StaticClass(), PlayerStarts);
@@ -70,31 +65,54 @@ void ASGGameMode::StartMatch()
 	Super::StartMatch();
 
 	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
-	if (IsValid(DetailedGameState)) DetailedGameState->AuthSetMatchState(EMatchState::InProgress);
+	check(DetailedGameState)
+
+	DetailedGameState->AuthSetMatchState(EMatchState::InProgress);
+	DetailedGameState->AuthSetRoundState(ERoundState::InProgress);
+}
+
+void ASGGameMode::FinishRound()
+{
+	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
+	check(IsValid(DetailedGameState))
+
+	DetailedGameState->AuthSetRoundState(ERoundState::Finished);
+
+	FTimerHandle Handle;
+	GetWorldTimerManager().SetTimer(Handle, [this, DetailedGameState]()
+	{
+		ResetPlayers();
+		DetailedGameState->AuthSetRoundState(ERoundState::InProgress);
+	}, 3.f, false);
 }
 
 void ASGGameMode::ResetPlayers()
 {
 	const ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
-	if (!IsValid(DetailedGameState)) return;
-	
+	check(IsValid(DetailedGameState))
+
 	TArray<APlayerState*> Players = DetailedGameState->GetAllPlayers();
 
 	for (int32 i = 0; i < Players.Num(); ++i)
 	{
-		ASGPlayerState* PlayerState = Cast<ASGPlayerState>(Players[i]);
-		if (!IsValid(PlayerState)) continue;
+		const ASGPlayerState* PlayerState = Cast<ASGPlayerState>(Players[i]);
+		check(IsValid(PlayerState))
 
 		ASGPlayerController* Controller = Cast<ASGPlayerController>(PlayerState->GetOwner());
-		if (!IsValid(Controller)) continue;
+		check(Controller)
 
 		const AActor* PlayerStart = FindPlayerStart(Controller);
 		if (!IsValid(PlayerStart)) continue;
-		
-		ASGCharacter* Character = Cast<ASGCharacter>(Controller->GetPawn());
-		if (!IsValid(Character)) continue;
 
-		PlayerState->AuthReset();
+		ASGCharacter* Character = PlayerState->GetCharacter();
+		check(Character)
+
+		if (PlayerState->IsDead())
+		{
+			Controller->GetPawn()->Destroy();
+			Controller->Possess(Character);
+		}
+
 		Controller->ClientResetControlRotation(PlayerStart->GetActorRotation());
 		Character->AuthReset(PlayerStart);
 	}

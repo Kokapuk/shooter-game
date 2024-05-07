@@ -4,6 +4,7 @@
 #include "GameFramework/PlayerState.h"
 #include "SGPlayerState.generated.h"
 
+class ASGCharacter;
 enum class ETeam : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDie);
@@ -17,6 +18,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnDie OnDie;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
+
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Register Player In Team")
 	void ServerRegisterPlayerInTeam(const ETeam Team);
 
@@ -27,11 +31,15 @@ public:
 	void MultiHandleDie();
 
 	UFUNCTION(BlueprintPure)
-	bool IsDead() const { return bIsDead; }
+	ASGCharacter* GetCharacter() const { return Character; }
 
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Reset")
-	void AuthReset();
+	UFUNCTION(BlueprintPure)
+	bool IsDead() const;
 
 protected:
-	uint8 bIsDead : 1;
+	UPROPERTY(Replicated, VisibleInstanceOnly)
+	ASGCharacter* Character;
+
+	UFUNCTION()
+	void AuthHandleMatchBegin();
 };

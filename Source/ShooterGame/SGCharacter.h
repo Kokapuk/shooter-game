@@ -112,13 +112,13 @@ protected:
 	void MoveRight(const float Value) { AddMovementInput(GetActorRightVector(), Value); };
 
 	UFUNCTION(BlueprintCallable)
-	void StartFire();
+	void StartFire() { Weapon->ServerStartFire(); }
 
 	UFUNCTION(BlueprintCallable)
-	void StopFire();
+	void StopFire() { Weapon->ServerStopFire(); }
 
 	UFUNCTION(BlueprintCallable)
-	void Reload();
+	void Reload() { Weapon->ServerReload(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Die")
 	void AuthDie();
@@ -127,7 +127,7 @@ protected:
 	void MultiResetAnimations();
 
 	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
-	void MultiSetDeadCollision(bool bNewDeadCollision);
+	void MultiSetDeadCollision(const bool bNewDeadCollision);
 
 private:
 	float TargetCameraHeight;
