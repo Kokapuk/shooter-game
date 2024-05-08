@@ -38,7 +38,7 @@ ASGCharacter::ASGCharacter()
 	CharacterMesh->SetRelativeLocation(FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight()));
 
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->AttachToComponent(CharacterMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
+	Camera->SetupAttachment(CharacterMesh);
 	Camera->SetFieldOfView(103);
 	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 	Camera->SetRelativeScale3D(FVector(.6f));
@@ -51,16 +51,14 @@ ASGCharacter::ASGCharacter()
 	ArmsMesh->CastShadow = false;
 
 	FirstPersonWeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonGunMesh");
+	FirstPersonWeaponMesh->SetupAttachment(ArmsMesh);
 	FirstPersonWeaponMesh->SetOnlyOwnerSee(true);
 	FirstPersonWeaponMesh->bCastDynamicShadow = false;
 	FirstPersonWeaponMesh->CastShadow = false;
-	FirstPersonWeaponMesh->AttachToComponent(ArmsMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true),
-	                                         "GripPoint");
 
 	ThirdPersonWeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonGunMesh");
 	ThirdPersonWeaponMesh->SetOwnerNoSee(true);
-	ThirdPersonWeaponMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true),
-	                                         "GripPoint");
+	ThirdPersonWeaponMesh->SetupAttachment(GetMesh());
 
 	Weapon = CreateDefaultSubobject<USGWeaponComponent>("Weapon");
 }
@@ -70,6 +68,10 @@ void ASGCharacter::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	Camera->SetRelativeLocation(FVector(0.f, 0.f, BaseEyeHeight));
+	FirstPersonWeaponMesh->AttachToComponent(ArmsMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true),
+											 "GripPoint");
+	ThirdPersonWeaponMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true),
+											 "GripPoint");
 }
 
 void ASGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -139,42 +139,38 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 
 void USGWeaponComponent::ServerReload_Implementation()
 {
-	if (IsValid(Equipped)) return;
+	if (!IsValid(Equipped)) return;
 
 	MultiReload();
 }
 
 void USGWeaponComponent::MultiReload_Implementation()
 {
+	check(IsValid(Equipped->WeaponReloadMontage))
+	check(IsValid(Equipped->ThirdPersonReloadMontage))
+
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
 
 	if (OwningCharacter->IsLocallyControlled())
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
+		check(IsValid(WeaponAnimInstance))
 
-		if (IsValid(WeaponAnimInstance) && IsValid(Equipped->WeaponReloadMontage))
-		{
-			WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
-			                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
-		}
+		WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
+		                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 	}
 	else if (!OwningCharacter->IsLocallyControlled())
 	{
 		UAnimInstance* BodyAnimInstance = OwningCharacter->GetMesh()->GetAnimInstance();
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetThirdPersonWeaponMesh()->GetAnimInstance();
+		check(IsValid(BodyAnimInstance))
+		check(IsValid(WeaponAnimInstance))
 
-		if (IsValid(BodyAnimInstance) && IsValid(Equipped->ThirdPersonReloadMontage))
-		{
-			BodyAnimInstance->Montage_Play(Equipped->ThirdPersonReloadMontage,
-			                               Equipped->ThirdPersonReloadMontage->GetPlayLength() / Equipped->ReloadTime);
-		}
-
-		if (IsValid(WeaponAnimInstance) && IsValid(Equipped->WeaponReloadMontage))
-		{
-			WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
-			                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
-		}
+		BodyAnimInstance->Montage_Play(Equipped->ThirdPersonReloadMontage,
+		                               Equipped->ThirdPersonReloadMontage->GetPlayLength() / Equipped->ReloadTime);
+		WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
+		                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 	}
 }
 
@@ -190,25 +186,18 @@ void USGWeaponComponent::PlayFireAnimations() const
 	{
 		UAnimInstance* ArmsAnimInstance = OwningCharacter->GetArmsMesh()->GetAnimInstance();
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
+		check(IsValid(ArmsAnimInstance))
+		check(IsValid(WeaponAnimInstance))
 
-		if (IsValid(ArmsAnimInstance))
-		{
-			ArmsAnimInstance->Montage_Play(Equipped->FirstPersonFireMontage);
-		}
-
-		if (IsValid(WeaponAnimInstance))
-		{
-			WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
-		}
+		ArmsAnimInstance->Montage_Play(Equipped->FirstPersonFireMontage);
+		WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
 	}
 	else if (!OwningCharacter->IsLocallyControlled())
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetThirdPersonWeaponMesh()->GetAnimInstance();
+		check(IsValid(WeaponAnimInstance))
 
-		if (IsValid(WeaponAnimInstance))
-		{
-			WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
-		}
+		WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
 	}
 }
 
@@ -249,10 +238,10 @@ void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
 {
 	check(IsValid(Equipped->BodyImpactCue))
 	check(IsValid(Equipped->SurfaceImpactCue))
-	
+
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(OwningCharacter)
-	
+
 	const AActor* HitActor = HitResult.GetActor();
 
 	if (IsValid(HitActor))
