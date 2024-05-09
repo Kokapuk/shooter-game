@@ -115,6 +115,11 @@ void ASGGameMode::ResetPlayers()
 
 		Controller->ClientResetControlRotation(PlayerStart->GetActorRotation());
 		Character->AuthReset(PlayerStart);
+
+		USGWeaponComponent* WeaponComponent = Character->GetWeaponComponent();
+		check(WeaponComponent)
+
+		WeaponComponent->AuthRest();
 	}
 }
 

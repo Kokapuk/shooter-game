@@ -17,13 +17,17 @@ public:
 	USGWeaponComponent();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
+	                           FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Equip")
 	void ServerEquip(USGWeaponDataAsset* Weapon);
 
 	UFUNCTION(BlueprintPure)
 	USGWeaponDataAsset* GetEquipped() const { return Equipped; }
+
+	UFUNCTION(BlueprintPure)
+	int32 GetRounds() const { return Rounds; }
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Start Fire")
 	void ServerStartFire();
@@ -40,13 +44,21 @@ public:
 	UFUNCTION(BlueprintPure)
 	FVector GetFireDirection() const;
 
+	UFUNCTION(BlueprintCallable, DisplayName="Reset", BlueprintAuthorityOnly)
+	void AuthRest();
+
 protected:
 	UPROPERTY(ReplicatedUsing=OnRep_Equipped)
 	USGWeaponDataAsset* Equipped;
 
-	bool bIsAutomaticallyFiring;
+	uint8 bIsAutomaticallyFiring : 1;
 	float TimeToFire;
 	float ShootingError;
+
+	UPROPERTY(Replicated)
+	int32 Rounds;
+
+	uint8 bIsReloading : 1;
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiFire(const FHitResult& HitResult);
@@ -59,6 +71,8 @@ protected:
 	void SpawnImpactParticles(const FHitResult& HitResult) const;
 
 private:
+	FTimerHandle ReloadingHandle;
+	
 	UFUNCTION()
 	void OnRep_Equipped() const;
 };

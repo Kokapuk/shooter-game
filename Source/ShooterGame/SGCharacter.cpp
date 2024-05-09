@@ -36,6 +36,9 @@ ASGCharacter::ASGCharacter()
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	CharacterMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 	CharacterMesh->SetRelativeLocation(FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight()));
+	CharacterMesh->SetOwnerNoSee(true);
+	CharacterMesh->SetGenerateOverlapEvents(true);
+	CharacterMesh->SetBoundsScale(2.f);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CharacterMesh);
@@ -69,9 +72,9 @@ void ASGCharacter::OnConstruction(const FTransform& Transform)
 
 	Camera->SetRelativeLocation(FVector(0.f, 0.f, BaseEyeHeight));
 	FirstPersonWeaponMesh->AttachToComponent(ArmsMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true),
-											 "GripPoint");
+	                                         "GripPoint");
 	ThirdPersonWeaponMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true),
-											 "GripPoint");
+	                                         "GripPoint");
 }
 
 void ASGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -98,9 +101,11 @@ void ASGCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	if (!IsLocallyControlled()) return;
+
 	const FVector NewCameraLocation = UKismetMathLibrary::VInterpTo(Camera->GetRelativeLocation(),
-	                                                                FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,
-	                                                                10.f);
+																	FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,
+																	10.f);
 	Camera->SetRelativeLocation(NewCameraLocation);
 }
 
@@ -136,6 +141,8 @@ float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 void ASGCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+
+	if (GetMovementComponent()->IsFalling()) return;
 
 	TargetCameraHeight = CrouchedEyeHeight;
 }
@@ -173,7 +180,7 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
 {
 	check(IsValid(HitReactMontage))
-	
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (!IsValid(AnimInstance)) return;
 
@@ -217,14 +224,34 @@ void ASGCharacter::AuthDie()
 
 	bIsDead = true;
 	OnRep_IsDead();
-	
+
 	DetailedPlayerState->MultiHandleDie();
 }
 
 void ASGCharacter::MultiResetAnimations_Implementation()
 {
 	UAnimInstance* MeshAnimInstance = GetMesh()->GetAnimInstance();
-	if (IsValid(MeshAnimInstance)) MeshAnimInstance->StopAllMontages(false);
+	check(IsValid(MeshAnimInstance))
+
+	MeshAnimInstance->StopAllMontages(false);
+
+	if (IsLocallyControlled())
+	{
+		UAnimInstance* ArmsMeshAnimInstance = ArmsMesh->GetAnimInstance();
+		UAnimInstance* WeaponAnimInstance = FirstPersonWeaponMesh->GetAnimInstance();
+		check(IsValid(ArmsMeshAnimInstance))
+		check(IsValid(WeaponAnimInstance))
+
+		ArmsMeshAnimInstance->StopAllMontages(false);
+		WeaponAnimInstance->StopAllMontages(false);
+	}
+	else
+	{
+		UAnimInstance* WeaponAnimInstance = ThirdPersonWeaponMesh->GetAnimInstance();
+		check(IsValid(WeaponAnimInstance))
+
+		WeaponAnimInstance->StopAllMontages(false);
+	}
 }
 
 void ASGCharacter::MultiSetDeadCollision_Implementation(const bool bNewDeadCollision)
@@ -254,10 +281,10 @@ void ASGCharacter::OnRep_IsDead()
 {
 	if (!bIsDead) return;
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	check(DeathMontage)
 
-	if (IsValid(AnimInstance) && IsValid(DeathMontage))
-	{
-		AnimInstance->Montage_Play(DeathMontage);
-	}
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	check(AnimInstance)
+
+	AnimInstance->Montage_Play(DeathMontage);
 }

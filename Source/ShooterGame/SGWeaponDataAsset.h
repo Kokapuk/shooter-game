@@ -31,6 +31,9 @@ public:
 	float ReloadTime;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	int32 MagazineCapacity;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	float HeadShotDamage;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)

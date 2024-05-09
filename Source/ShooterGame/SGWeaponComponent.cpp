@@ -22,6 +22,7 @@ void USGWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(USGWeaponComponent, Equipped);
+	DOREPLIFETIME(USGWeaponComponent, Rounds);
 }
 
 void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -53,6 +54,7 @@ void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 	ShootingError = 0.f;
 	Equipped = Weapon;
 	OnRep_Equipped();
+	Rounds = IsValid(Weapon) ? Weapon->MagazineCapacity : 0;
 }
 
 void USGWeaponComponent::ServerStartFire_Implementation()
@@ -66,13 +68,17 @@ void USGWeaponComponent::ServerStartFire_Implementation()
 void USGWeaponComponent::ServerStopFire_Implementation()
 {
 	bIsAutomaticallyFiring = false;
+
+	if (Rounds != 0) return;
+	ServerReload_Implementation();
 }
 
 void USGWeaponComponent::AuthFire()
 {
-	if (!GetOwner()->HasAuthority() || !IsValid(Equipped) || TimeToFire > 0.f) return;
+	if (!GetOwner()->HasAuthority() || !IsValid(Equipped) || TimeToFire > 0.f || !Rounds || bIsReloading) return;
 
 	TimeToFire = Equipped->TimeBetweenShots;
+	Rounds--;
 
 	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
@@ -80,7 +86,7 @@ void USGWeaponComponent::AuthFire()
 	const UCameraComponent* Camera = OwningCharacter->GetCamera();
 	check(IsValid(Camera))
 
-	const FVector End = Camera->GetComponentLocation() + GetFireDirection() * 10000.f;
+	const FVector End = Camera->GetComponentLocation() + GetFireDirection() * 35000.f;
 
 	FHitResult HitResult;
 	const bool bHit = UKismetSystemLibrary::LineTraceSingle(OwningCharacter, Camera->GetComponentLocation(), End,
@@ -130,6 +136,15 @@ FVector USGWeaponComponent::GetFireDirection() const
 	return AimDirection;
 }
 
+void USGWeaponComponent::AuthRest()
+{
+	if (!GetOwner()->HasAuthority()) return;
+
+	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
+	bIsReloading = false;
+	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
+}
+
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 {
 	PlayFireAnimations();
@@ -139,9 +154,18 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 
 void USGWeaponComponent::ServerReload_Implementation()
 {
-	if (!IsValid(Equipped)) return;
+	if (!IsValid(Equipped) || Rounds == Equipped->MagazineCapacity || bIsReloading) return;
 
+	bIsReloading = true;
 	MultiReload();
+
+	GetOwner()->GetWorldTimerManager().SetTimer(ReloadingHandle, [this]()
+	{
+		bIsReloading = false;
+
+		if (!IsValid(this->Equipped)) return;
+		Rounds = this->Equipped->MagazineCapacity;
+	}, Equipped->ReloadTime, false);
 }
 
 void USGWeaponComponent::MultiReload_Implementation()

@@ -15,6 +15,8 @@ void ASGGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ASGGameState, RedTeamPlayers);
 	DOREPLIFETIME(ASGGameState, BlueTeamPlayers);
 	DOREPLIFETIME(ASGGameState, Spectators);
+	DOREPLIFETIME(ASGGameState, RedTeamScore);
+	DOREPLIFETIME(ASGGameState, BlueTeamScore);
 }
 
 void ASGGameState::BeginPlay()
@@ -173,8 +175,11 @@ void ASGGameState::AuthHandlePlayerDie()
 
 	if (!bAreAllRedTeamMembersDead && !bAreAllBlueTeamMembersDead) return;
 
+	if (bAreAllRedTeamMembersDead) BlueTeamScore++;
+	else if (bAreAllBlueTeamMembersDead) RedTeamScore++; 
+	
 	ASGGameMode* GameMode = GetWorld()->GetAuthGameMode<ASGGameMode>();
 	check(IsValid(GameMode))
-
+	
 	GameMode->FinishRound();
 }

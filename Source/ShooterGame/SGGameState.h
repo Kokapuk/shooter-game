@@ -73,6 +73,12 @@ public:
 	UFUNCTION(BlueprintPure)
 	ETeam GetPlayerTeam(const APlayerState* Player) const;
 
+	UFUNCTION(BlueprintPure)
+	int32 GetRedTeamScore() const { return RedTeamScore; }
+
+	UFUNCTION(BlueprintPure)
+	int32 GetBlueTeamScore() const { return BlueTeamScore; }
+
 protected:
 	UPROPERTY(ReplicatedUsing=OnRep_ShooterMatchState, VisibleInstanceOnly)
 	EMatchState ShooterMatchState;
@@ -88,6 +94,12 @@ protected:
 
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	TArray<APlayerState*> Spectators;
+
+	UPROPERTY(Replicated, VisibleInstanceOnly)
+	int32 RedTeamScore;
+
+	UPROPERTY(Replicated, VisibleInstanceOnly)
+	int32 BlueTeamScore;
 
 private:
 	UFUNCTION()
