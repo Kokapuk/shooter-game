@@ -85,7 +85,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	USGWeaponComponent* Weapon;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=1.f))
 	float MaxHealth;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly)

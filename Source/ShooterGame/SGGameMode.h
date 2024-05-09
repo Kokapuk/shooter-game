@@ -18,12 +18,13 @@ public:
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	virtual AActor* FindPlayerStart_Implementation(AController* Player, const FString& IncomingName) override;
 	virtual void StartMatch() override;
+	virtual void EndMatch() override;
 
 	bool IsFriendlyFireAllowed() const { return bIsFriendlyFireAllowed; }
 
 	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
 	void FinishRound();
-	
+
 	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
 	void ResetPlayers();
 
@@ -32,4 +33,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly)
 	uint8 bIsFriendlyFireAllowed : 1;
+
+	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=1))
+	int32 RoundsToWin;
 };

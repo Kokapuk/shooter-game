@@ -119,6 +119,14 @@ void ASGGameState::OnRep_ShooterMatchState()
 	{
 	case EMatchState::InProgress:
 		OnMatchBegin.Broadcast();
+		break;
+	case EMatchState::Finished:
+		OnMatchFinish.Broadcast(RedTeamScore > BlueTeamScore
+			                        ? ETeam::Red
+			                        : BlueTeamScore > RedTeamScore
+			                        ? ETeam::Blue
+			                        : ETeam::None);
+		break;
 	}
 }
 
@@ -128,8 +136,10 @@ void ASGGameState::OnRep_RoundState()
 	{
 	case ERoundState::InProgress:
 		OnRoundBegin.Broadcast();
+		break;
 	case ERoundState::Finished:
 		OnRoundFinish.Broadcast();
+		break;
 	}
 }
 
@@ -176,10 +186,10 @@ void ASGGameState::AuthHandlePlayerDie()
 	if (!bAreAllRedTeamMembersDead && !bAreAllBlueTeamMembersDead) return;
 
 	if (bAreAllRedTeamMembersDead) BlueTeamScore++;
-	else if (bAreAllBlueTeamMembersDead) RedTeamScore++; 
-	
+	else if (bAreAllBlueTeamMembersDead) RedTeamScore++;
+
 	ASGGameMode* GameMode = GetWorld()->GetAuthGameMode<ASGGameMode>();
 	check(IsValid(GameMode))
-	
+
 	GameMode->FinishRound();
 }

@@ -44,7 +44,7 @@ ASGCharacter::ASGCharacter()
 	Camera->SetupAttachment(CharacterMesh);
 	Camera->SetFieldOfView(103);
 	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
-	Camera->SetRelativeScale3D(FVector(.6f));
+	Camera->SetRelativeScale3D(FVector(.5f));
 	Camera->bUsePawnControlRotation = true;
 
 	ArmsMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ArmsMesh");
@@ -100,8 +100,6 @@ void ASGCharacter::BeginPlay()
 void ASGCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-	if (!IsLocallyControlled()) return;
 
 	const FVector NewCameraLocation = UKismetMathLibrary::VInterpTo(Camera->GetRelativeLocation(),
 																	FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,

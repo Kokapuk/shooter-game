@@ -13,6 +13,7 @@ ASGGameMode::ASGGameMode()
 {
 	bDelayedStart = true;
 	bIsFriendlyFireAllowed = false;
+	RoundsToWin = 1;
 }
 
 void ASGGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -71,12 +72,27 @@ void ASGGameMode::StartMatch()
 	DetailedGameState->AuthSetRoundState(ERoundState::InProgress);
 }
 
+void ASGGameMode::EndMatch()
+{
+	Super::EndMatch();
+
+	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
+	check(DetailedGameState)
+
+	DetailedGameState->AuthSetMatchState(EMatchState::Finished);
+}
+
 void ASGGameMode::FinishRound()
 {
 	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
 	check(IsValid(DetailedGameState))
 
 	DetailedGameState->AuthSetRoundState(ERoundState::Finished);
+
+	if (DetailedGameState->GetRedTeamScore() == RoundsToWin || DetailedGameState->GetBlueTeamScore() == RoundsToWin)
+	{
+		return EndMatch();
+	}
 
 	FTimerHandle Handle;
 	GetWorldTimerManager().SetTimer(Handle, [this, DetailedGameState]()

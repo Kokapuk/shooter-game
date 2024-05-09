@@ -16,7 +16,8 @@ UENUM(BlueprintType)
 enum class EMatchState : uint8
 {
 	WaitingToStart,
-	InProgress
+	InProgress,
+	Finished
 };
 
 UENUM(BlueprintType)
@@ -28,6 +29,8 @@ enum class ERoundState : uint8
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMatchBegin);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchFinish, ETeam, WinnerTeam);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundBegin);
 
@@ -41,6 +44,9 @@ class SHOOTERGAME_API ASGGameState : public AGameState
 public:
 	UPROPERTY(BlueprintAssignable)
 	FOnMatchBegin OnMatchBegin;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnMatchFinish OnMatchFinish;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnRoundBegin OnRoundBegin;

@@ -30,7 +30,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	float ReloadTime;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(ClampMin=1))
 	int32 MagazineCapacity;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
