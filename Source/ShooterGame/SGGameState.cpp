@@ -1,6 +1,8 @@
 #include "SGGameState.h"
 
+#include "EngineUtils.h"
 #include "SGGameMode.h"
+#include "SGPlayerStart.h"
 #include "SGPlayerState.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -23,8 +25,20 @@ void ASGGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!HasAuthority()) return;
+	for (TActorIterator<ASGPlayerStart> Iterator(GetWorld()); Iterator; ++Iterator)
+	{
+		switch (Iterator->GetTeam())
+		{
+		case ETeam::Red:
+			RedTeamSlotsNumber++;
+			break;
+		case ETeam::Blue:
+			BlueTeamSlotsNumber++;
+			break;
+		}
+	}
 
+	if (!HasAuthority()) return;
 	OnMatchBegin.AddDynamic(this, &ASGGameState::AuthHandleMatchBegin);
 }
 
@@ -80,9 +94,38 @@ ETeam ASGGameState::GetPlayerTeam(const APlayerState* Player) const
 	return ETeam::None;
 }
 
+int32 ASGGameState::GetTeamScore(const ETeam Team) const
+{
+	switch (Team)
+	{
+	case ETeam::Red:
+		return RedTeamScore;
+	case ETeam::Blue:
+		return BlueTeamScore;
+	default:
+		return -1;
+	}
+}
+
+int32 ASGGameState::GetTeamSlotsNumber(const ETeam Team) const
+{
+	switch (Team)
+	{
+	case ETeam::Red:
+		return RedTeamSlotsNumber;
+	case ETeam::Blue:
+		return BlueTeamSlotsNumber;
+	default:
+		return -1;
+	}
+}
+
 void ASGGameState::AuthRegisterPlayerInTeam(APlayerState* Player, const ETeam Team)
 {
-	if (!HasAuthority()) return;
+	if (!HasAuthority() || GetTeamSlotsNumber(Team) == GetTeamPlayers(Team).Num())
+	{
+		return;
+	}
 
 	switch (Team)
 	{

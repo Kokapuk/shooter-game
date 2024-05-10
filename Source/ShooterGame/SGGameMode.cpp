@@ -89,7 +89,7 @@ void ASGGameMode::FinishRound()
 
 	DetailedGameState->AuthSetRoundState(ERoundState::Finished);
 
-	if (DetailedGameState->GetRedTeamScore() == RoundsToWin || DetailedGameState->GetBlueTeamScore() == RoundsToWin)
+	if (DetailedGameState->GetTeamScore(ETeam::Red) == RoundsToWin || DetailedGameState->GetTeamScore(ETeam::Blue) == RoundsToWin)
 	{
 		return EndMatch();
 	}

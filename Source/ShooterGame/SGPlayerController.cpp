@@ -1,13 +1,20 @@
 #include "SGPlayerController.h"
 
-void ASGPlayerController::AddYawInput(float Value)
+#include "SGGameUserSettings.h"
+
+void ASGPlayerController::BeginPlay()
 {
-	Super::AddYawInput(Value * Sensitivity);
+	Super::BeginPlay();
+
+	if (IsLocalPlayerController()) CosmeticUpdateMouseSensitivity();
 }
 
-void ASGPlayerController::AddPitchInput(float Value)
+void ASGPlayerController::CosmeticUpdateMouseSensitivity()
 {
-	Super::AddPitchInput(Value * Sensitivity);
+	USGGameUserSettings* GameUserSettings = USGGameUserSettings::GetSGGameUserSettings();
+	GameUserSettings->LoadSettings();
+	
+	MouseSensitivity = GameUserSettings->MouseSensitivity;
 }
 
 void ASGPlayerController::ClientResetControlRotation_Implementation(const FRotator& NewRotation)

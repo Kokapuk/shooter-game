@@ -54,8 +54,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnRoundFinish OnRoundFinish;
 
-	virtual
-	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Set Match State")
@@ -66,6 +65,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	EMatchState GetShooterMatchState() const { return ShooterMatchState; }
+
+	UFUNCTION(BlueprintPure)
+	int32 GetTeamSlotsNumber(const ETeam Team) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Register Player In Team")
 	void AuthRegisterPlayerInTeam(APlayerState* Player, const ETeam Team);
@@ -80,10 +82,7 @@ public:
 	ETeam GetPlayerTeam(const APlayerState* Player) const;
 
 	UFUNCTION(BlueprintPure)
-	int32 GetRedTeamScore() const { return RedTeamScore; }
-
-	UFUNCTION(BlueprintPure)
-	int32 GetBlueTeamScore() const { return BlueTeamScore; }
+	int32 GetTeamScore(const ETeam Team) const;
 
 protected:
 	UPROPERTY(ReplicatedUsing=OnRep_ShooterMatchState, VisibleInstanceOnly)
@@ -91,6 +90,12 @@ protected:
 
 	UPROPERTY(ReplicatedUsing=OnRep_RoundState, VisibleInstanceOnly)
 	ERoundState RoundState;
+
+	UPROPERTY(VisibleInstanceOnly)
+	int32 RedTeamSlotsNumber;
+
+	UPROPERTY(VisibleInstanceOnly)
+	int32 BlueTeamSlotsNumber;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	TArray<APlayerState*> RedTeamPlayers;

@@ -27,11 +27,13 @@ ASGCharacter::ASGCharacter()
 	Capsule->SetCapsuleRadius(55.f);
 
 	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	MovementComponent->bCanWalkOffLedgesWhenCrouching = true;
 	MovementComponent->NavAgentProps.bCanCrouch = true;
 	MovementComponent->MaxWalkSpeed = 540.f;
 	MovementComponent->MaxWalkSpeedCrouched = 240.f;
 	MovementComponent->AirControl = 1.f;
 	MovementComponent->CrouchedHalfHeight = 60.f;
+	MovementComponent->PerchRadiusThreshold = 10.f;
 
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	CharacterMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
