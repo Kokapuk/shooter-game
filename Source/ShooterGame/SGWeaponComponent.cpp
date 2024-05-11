@@ -1,6 +1,7 @@
 #include "SGWeaponComponent.h"
 
 #include "SGCharacter.h"
+#include "SGGameUserSettings.h"
 #include "SGWeaponDataAsset.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -49,9 +50,12 @@ void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 {
+	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
+	bIsReloading = false;
 	bIsAutomaticallyFiring = false;
 	TimeToFire = 0.f;
 	ShootingError = 0.f;
+	
 	Equipped = Weapon;
 	OnRep_Equipped();
 	Rounds = IsValid(Weapon) ? Weapon->MagazineCapacity : 0;
@@ -148,8 +152,13 @@ void USGWeaponComponent::AuthRest()
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 {
 	PlayFireAnimations();
-	SpawnTracer(HitResult);
-	SpawnImpactParticles(HitResult);
+
+	if (USGGameUserSettings::GetSGGameUserSettings()->bShowTracers)
+	{
+		SpawnTracer(HitResult);
+	}
+
+	PlayImpactEffects(HitResult);
 }
 
 void USGWeaponComponent::ServerReload_Implementation()
@@ -159,13 +168,8 @@ void USGWeaponComponent::ServerReload_Implementation()
 	bIsReloading = true;
 	MultiReload();
 
-	GetOwner()->GetWorldTimerManager().SetTimer(ReloadingHandle, [this]()
-	{
-		bIsReloading = false;
-
-		if (!IsValid(this->Equipped)) return;
-		Rounds = this->Equipped->MagazineCapacity;
-	}, Equipped->ReloadTime, false);
+	GetOwner()->GetWorldTimerManager().SetTimer(ReloadingHandle, this, &USGWeaponComponent::AuthFinishReload,
+	                                            Equipped->ReloadTime, false);
 }
 
 void USGWeaponComponent::MultiReload_Implementation()
@@ -196,6 +200,16 @@ void USGWeaponComponent::MultiReload_Implementation()
 		WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
 		                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 	}
+}
+
+void USGWeaponComponent::AuthFinishReload()
+{
+	if (!GetOwner()->HasAuthority()) return;
+
+	bIsReloading = false;
+
+	check(Equipped)
+	Rounds = Equipped->MagazineCapacity;
 }
 
 void USGWeaponComponent::PlayFireAnimations() const
@@ -258,7 +272,7 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 	}
 }
 
-void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
+void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 {
 	check(IsValid(Equipped->BodyImpactCue))
 	check(IsValid(Equipped->SurfaceImpactCue))
@@ -274,6 +288,11 @@ void USGWeaponComponent::SpawnImpactParticles(const FHitResult& HitResult) const
 		                                      HitActor->CanBeDamaged()
 			                                      ? Equipped->BodyImpactCue
 			                                      : Equipped->SurfaceImpactCue, HitResult.Location);
+
+		if (!USGGameUserSettings::GetSGGameUserSettings()->bShowParticles)
+		{
+			return;
+		}
 
 		UParticleSystem* ImpactParticles = nullptr;
 

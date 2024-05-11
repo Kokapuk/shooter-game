@@ -10,11 +10,19 @@ class SHOOTERGAME_API USGGameUserSettings : public UGameUserSettings
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(Config, BlueprintReadOnly)
-	float MouseSensitivity = .5f;
+	USGGameUserSettings();
 
 	UPROPERTY(Config, BlueprintReadOnly)
-	float Volume = .5f;
+	float MouseSensitivity;
+
+	UPROPERTY(Config, BlueprintReadOnly)
+	float Volume;
+
+	UPROPERTY(Config, BlueprintReadOnly)
+	uint8 bShowParticles : 1;
+
+	UPROPERTY(Config, BlueprintReadOnly)
+	uint8 bShowTracers : 1;
 
 	UFUNCTION(BlueprintPure)
 	static USGGameUserSettings* GetSGGameUserSettings() { return Cast<USGGameUserSettings>(GetGameUserSettings()); };
@@ -24,4 +32,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetVolume(const float NewVolume) { Volume = NewVolume; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetShowParticles(const bool bNewShowParticles) { bShowParticles = bNewShowParticles; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetShowTracers(const bool bNewShowTracers) { bShowTracers = bNewShowTracers; }
 };

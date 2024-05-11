@@ -66,9 +66,12 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiReload();
 
+	UFUNCTION()
+	void AuthFinishReload();
+
 	void PlayFireAnimations() const;
 	void SpawnTracer(const FHitResult& HitResult) const;
-	void SpawnImpactParticles(const FHitResult& HitResult) const;
+	void PlayImpactEffects(const FHitResult& HitResult) const;
 
 private:
 	FTimerHandle ReloadingHandle;
