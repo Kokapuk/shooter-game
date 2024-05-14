@@ -66,7 +66,7 @@ void ASGGameMode::StartMatch()
 	Super::StartMatch();
 
 	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
-	check(DetailedGameState)
+	check(IsValid(DetailedGameState))
 
 	DetailedGameState->AuthSetMatchState(EMatchState::InProgress);
 	DetailedGameState->AuthSetRoundState(ERoundState::InProgress);
@@ -77,9 +77,22 @@ void ASGGameMode::EndMatch()
 	Super::EndMatch();
 
 	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
-	check(DetailedGameState)
+	check(IsValid(DetailedGameState))
 
 	DetailedGameState->AuthSetMatchState(EMatchState::Finished);
+}
+
+void ASGGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+
+	ASGPlayerState* Player = Exiting->GetPlayerState<ASGPlayerState>();
+	check(IsValid(Player))
+
+	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
+	check(IsValid(DetailedGameState))
+	
+	DetailedGameState->AuthUnregisterPlayerFromTeam(Player, Player->GetTeam());
 }
 
 void ASGGameMode::FinishRound()
@@ -135,7 +148,7 @@ void ASGGameMode::ResetPlayers()
 		USGWeaponComponent* WeaponComponent = Character->GetWeaponComponent();
 		check(WeaponComponent)
 
-		WeaponComponent->AuthRest();
+		WeaponComponent->AuthReset();
 	}
 }
 

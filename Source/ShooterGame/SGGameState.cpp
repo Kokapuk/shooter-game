@@ -156,6 +156,21 @@ void ASGGameState::AuthRegisterPlayerInTeam(APlayerState* Player, const ETeam Te
 	}
 }
 
+void ASGGameState::AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETeam Team)
+{
+	if (!HasAuthority()) return;
+
+	switch (Team)
+	{
+	case ETeam::Red:
+		RedTeamPlayers.Remove(Player);
+	case ETeam::Blue:
+		BlueTeamPlayers.Remove(Player);
+	case ETeam::None:
+		Spectators.Remove(Player);
+	}
+}
+
 void ASGGameState::OnRep_ShooterMatchState()
 {
 	switch (ShooterMatchState)

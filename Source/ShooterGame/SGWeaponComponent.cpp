@@ -2,6 +2,7 @@
 
 #include "SGCharacter.h"
 #include "SGGameUserSettings.h"
+#include "SGPlayerState.h"
 #include "SGWeaponDataAsset.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -26,19 +27,31 @@ void USGWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(USGWeaponComponent, Rounds);
 }
 
+void USGWeaponComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!HasAuthority()) return;
+
+	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(OwningCharacter)
+
+	OwningCharacter->OnDie.AddUniqueDynamic(this, &USGWeaponComponent::AuthHandleOwnerDie);
+}
+
 void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                        FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (GetOwner()->HasAuthority() && IsValid(Equipped) && !bIsAutomaticallyFiring)
+	if (HasAuthority() && IsValid(Equipped) && !bIsAutomaticallyFiring)
 	{
 		ShootingError = FMath::Clamp(
 			ShootingError - (Equipped->MaxSprayShootingError / Equipped->MaxShootingErrorRecoveryTime) * DeltaTime,
 			0.f, Equipped->MaxSprayShootingError);
 	}
 
-	if (GetOwner()->HasAuthority() && bIsAutomaticallyFiring && IsValid(Equipped) && TimeToFire == 0.f)
+	if (HasAuthority() && bIsAutomaticallyFiring && IsValid(Equipped) && TimeToFire == 0.f)
 	{
 		AuthFire();
 	}
@@ -48,6 +61,14 @@ void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	}
 }
 
+bool USGWeaponComponent::IsLocallyControlled() const
+{
+	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(OwningCharacter))
+
+	return OwningCharacter->IsLocallyControlled();
+}
+
 void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 {
 	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
@@ -55,7 +76,7 @@ void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 	bIsAutomaticallyFiring = false;
 	TimeToFire = 0.f;
 	ShootingError = 0.f;
-	
+
 	Equipped = Weapon;
 	OnRep_Equipped();
 	Rounds = IsValid(Weapon) ? Weapon->MagazineCapacity : 0;
@@ -79,7 +100,11 @@ void USGWeaponComponent::ServerStopFire_Implementation()
 
 void USGWeaponComponent::AuthFire()
 {
-	if (!GetOwner()->HasAuthority() || !IsValid(Equipped) || TimeToFire > 0.f || !Rounds || bIsReloading) return;
+	if (!HasAuthority() || !IsValid(Equipped) || TimeToFire > 0.f || !Rounds ||
+		bIsReloading)
+	{
+		return;
+	}
 
 	TimeToFire = Equipped->TimeBetweenShots;
 	Rounds--;
@@ -140,10 +165,11 @@ FVector USGWeaponComponent::GetFireDirection() const
 	return AimDirection;
 }
 
-void USGWeaponComponent::AuthRest()
+void USGWeaponComponent::AuthReset()
 {
-	if (!GetOwner()->HasAuthority()) return;
+	if (!HasAuthority()) return;
 
+	bIsAutomaticallyFiring = false;
 	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
 	bIsReloading = false;
 	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
@@ -159,6 +185,12 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 	}
 
 	PlayImpactEffects(HitResult);
+
+	if (!IsLocallyControlled()) return;
+	const AActor* HitActor = HitResult.GetActor();
+
+	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
+	CosmeticPlayHitMarker();
 }
 
 void USGWeaponComponent::ServerReload_Implementation()
@@ -180,7 +212,7 @@ void USGWeaponComponent::MultiReload_Implementation()
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
 
-	if (OwningCharacter->IsLocallyControlled())
+	if (IsLocallyControlled())
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
 		check(IsValid(WeaponAnimInstance))
@@ -188,7 +220,7 @@ void USGWeaponComponent::MultiReload_Implementation()
 		WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
 		                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 	}
-	else if (!OwningCharacter->IsLocallyControlled())
+	else if (!IsLocallyControlled())
 	{
 		UAnimInstance* BodyAnimInstance = OwningCharacter->GetMesh()->GetAnimInstance();
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetThirdPersonWeaponMesh()->GetAnimInstance();
@@ -204,7 +236,7 @@ void USGWeaponComponent::MultiReload_Implementation()
 
 void USGWeaponComponent::AuthFinishReload()
 {
-	if (!GetOwner()->HasAuthority()) return;
+	if (!HasAuthority()) return;
 
 	bIsReloading = false;
 
@@ -220,7 +252,7 @@ void USGWeaponComponent::PlayFireAnimations() const
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
 
-	if (OwningCharacter->IsLocallyControlled())
+	if (IsLocallyControlled())
 	{
 		UAnimInstance* ArmsAnimInstance = OwningCharacter->GetArmsMesh()->GetAnimInstance();
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
@@ -230,7 +262,7 @@ void USGWeaponComponent::PlayFireAnimations() const
 		ArmsAnimInstance->Montage_Play(Equipped->FirstPersonFireMontage);
 		WeaponAnimInstance->Montage_Play(Equipped->WeaponFireMontage);
 	}
-	else if (!OwningCharacter->IsLocallyControlled())
+	else if (!IsLocallyControlled())
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetThirdPersonWeaponMesh()->GetAnimInstance();
 		check(IsValid(WeaponAnimInstance))
@@ -246,7 +278,7 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 
 	const AActor* HitActor = HitResult.GetActor();
 
-	if (OwningCharacter->IsLocallyControlled())
+	if (IsLocallyControlled())
 	{
 		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetFirstPersonWeaponMesh();
 		check(IsValid(WeaponMesh))
@@ -258,7 +290,7 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 				                               ? HitResult.Location
 				                               : HitResult.TraceEnd));
 	}
-	else if (!OwningCharacter->IsLocallyControlled())
+	else if (!IsLocallyControlled())
 	{
 		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetThirdPersonWeaponMesh();
 		check(IsValid(WeaponMesh))
@@ -307,19 +339,29 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 	}
 }
 
+void USGWeaponComponent::CosmeticPlayHitMarker()
+{
+	if (!IsLocallyControlled()) return;
+	check(HitMarker);
+
+	UGameplayStatics::PlaySound2D(this, HitMarker);
+}
+
 void USGWeaponComponent::OnRep_Equipped() const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(OwningCharacter)
 
-	if (OwningCharacter->IsLocallyControlled())
-	{
-		OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(
+	OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(
 			Equipped == nullptr ? nullptr : Equipped->Mesh);
-	}
-	else
-	{
-		OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(
+
+	OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(
 			Equipped == nullptr ? nullptr : Equipped->Mesh);
-	}
+}
+
+void USGWeaponComponent::AuthHandleOwnerDie()
+{
+	if (!HasAuthority()) return;
+
+	ServerStopFire_Implementation();
 }

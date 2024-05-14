@@ -7,7 +7,7 @@
 class ASGCharacter;
 enum class ETeam : uint8;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDie);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDie);
 
 UCLASS()
 class SHOOTERGAME_API ASGPlayerState : public APlayerState
@@ -16,7 +16,7 @@ class SHOOTERGAME_API ASGPlayerState : public APlayerState
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnDie OnDie;
+	FOnPlayerDie OnDie;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;

@@ -40,7 +40,7 @@ ASGCharacter::ASGCharacter()
 	CharacterMesh->SetRelativeLocation(FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight()));
 	CharacterMesh->SetOwnerNoSee(true);
 	CharacterMesh->SetGenerateOverlapEvents(true);
-	CharacterMesh->SetBoundsScale(2.f);
+	CharacterMesh->SetBoundsScale(4.f);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CharacterMesh);
@@ -160,7 +160,7 @@ ETeam ASGCharacter::GetTeam() const
 	check(IsValid(GameState))
 
 	const ASGPlayerState* Player = GetPlayerState<ASGPlayerState>();
-	check(IsValid(Player))
+	if (!IsValid(Player)) return ETeam::None;
 
 	return Player->GetTeam();
 }
@@ -211,6 +211,7 @@ void ASGCharacter::AuthDie()
 	if (!HasAuthority()) return;
 
 	MultiSetDeadCollision(true);
+	GetMovementComponent()->Velocity = FVector::ZeroVector;
 
 	UWorld* World = GetWorld();
 	const AGameModeBase* GameMode = World->GetAuthGameMode<AGameModeBase>();
@@ -281,10 +282,12 @@ void ASGCharacter::OnRep_IsDead()
 {
 	if (!bIsDead) return;
 
-	check(DeathMontage)
+	check(IsValid(DeathMontage))
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	check(AnimInstance)
+	check(IsValid(AnimInstance))
 
 	AnimInstance->Montage_Play(DeathMontage);
+
+	OnDie.Broadcast();
 }

@@ -17,8 +17,15 @@ public:
 	USGWeaponComponent();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
+
+	UFUNCTION(BlueprintPure)
+	bool HasAuthority() const { return GetOwner()->HasAuthority(); }
+
+	UFUNCTION(BlueprintPure)
+	bool IsLocallyControlled() const;
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Equip")
 	void ServerEquip(USGWeaponDataAsset* Weapon);
@@ -32,12 +39,9 @@ public:
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Start Fire")
 	void ServerStartFire();
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Stop Fire")
+	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Stop Fire")
 	void ServerStopFire();
-
-	UFUNCTION(BlueprintCallable, DisplayName="Fire", BlueprintAuthorityOnly)
-	void AuthFire();
-
+	
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Reload")
 	void ServerReload();
 
@@ -45,9 +49,12 @@ public:
 	FVector GetFireDirection() const;
 
 	UFUNCTION(BlueprintCallable, DisplayName="Reset", BlueprintAuthorityOnly)
-	void AuthRest();
+	void AuthReset();
 
 protected:
+	UPROPERTY(EditDefaultsOnly)
+	USoundBase* HitMarker;
+	
 	UPROPERTY(ReplicatedUsing=OnRep_Equipped)
 	USGWeaponDataAsset* Equipped;
 
@@ -59,6 +66,9 @@ protected:
 	int32 Rounds;
 
 	uint8 bIsReloading : 1;
+
+	UFUNCTION(BlueprintCallable, DisplayName="Fire", BlueprintAuthorityOnly)
+	void AuthFire();
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiFire(const FHitResult& HitResult);
@@ -73,9 +83,15 @@ protected:
 	void SpawnTracer(const FHitResult& HitResult) const;
 	void PlayImpactEffects(const FHitResult& HitResult) const;
 
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Play Hit Marker")
+	void CosmeticPlayHitMarker();
+
 private:
 	FTimerHandle ReloadingHandle;
-	
+
 	UFUNCTION()
 	void OnRep_Equipped() const;
+
+	UFUNCTION()
+	void AuthHandleOwnerDie();
 };

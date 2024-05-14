@@ -15,6 +15,8 @@ class UMotionControllerComponent;
 class UAnimMontage;
 class USoundBase;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCharacterDie);
+
 UCLASS(config=Game)
 class ASGCharacter : public ACharacter
 {
@@ -35,6 +37,9 @@ public:
 	                         AActor* DamageCauser) override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnCharacterDie OnDie;
 
 	UFUNCTION(BlueprintPure)
 	USkeletalMeshComponent* GetArmsMesh() const { return ArmsMesh; }

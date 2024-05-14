@@ -19,6 +19,7 @@ public:
 	virtual AActor* FindPlayerStart_Implementation(AController* Player, const FString& IncomingName) override;
 	virtual void StartMatch() override;
 	virtual void EndMatch() override;
+	virtual void Logout(AController* Exiting) override;
 
 	bool IsFriendlyFireAllowed() const { return bIsFriendlyFireAllowed; }
 

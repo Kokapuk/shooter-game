@@ -72,6 +72,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Register Player In Team")
 	void AuthRegisterPlayerInTeam(APlayerState* Player, const ETeam Team);
 
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Unregister Player From Team")
+	void AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETeam Team);
+
 	UFUNCTION(BlueprintPure)
 	TArray<APlayerState*> GetTeamPlayers(const ETeam Team) const;
 
