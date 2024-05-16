@@ -25,7 +25,7 @@ class ASGCharacter : public ACharacter
 	DECLARE_DELEGATE_OneParam(FCrouchDelegate, bool);
 
 public:
-	ASGCharacter();
+	ASGCharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -117,10 +117,7 @@ protected:
 	void MoveRight(const float Value) { AddMovementInput(GetActorRightVector(), Value); };
 
 	UFUNCTION(BlueprintCallable)
-	void StartFire() { Weapon->ServerStartFire(); }
-
-	UFUNCTION(BlueprintCallable)
-	void StopFire() { Weapon->ServerStopFire(); }
+	void Fire() { Weapon->CosmeticFire(); }
 
 	UFUNCTION(BlueprintCallable)
 	void Reload() { Weapon->ServerReload(); }

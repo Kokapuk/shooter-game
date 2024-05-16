@@ -1,5 +1,6 @@
 #include "SGCharacter.h"
 
+#include "SGCharacterMovementComponent.h"
 #include "SGGameMode.h"
 #include "SGGameState.h"
 #include "SGPlayerState.h"
@@ -15,7 +16,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 
-ASGCharacter::ASGCharacter()
+ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<USGCharacterMovementComponent>(CharacterMovementComponentName))
 {
 	MaxHealth = 100.f;
 	BaseEyeHeight = 166.f;
@@ -40,17 +42,17 @@ ASGCharacter::ASGCharacter()
 	CharacterMesh->SetRelativeLocation(FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight()));
 	CharacterMesh->SetOwnerNoSee(true);
 	CharacterMesh->SetGenerateOverlapEvents(true);
-	CharacterMesh->SetBoundsScale(4.f);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CharacterMesh);
-	Camera->SetFieldOfView(103);
 	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 	Camera->SetRelativeScale3D(FVector(.5f));
+	Camera->SetFieldOfView(103);
 	Camera->bUsePawnControlRotation = true;
 
 	ArmsMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ArmsMesh");
 	ArmsMesh->SetOnlyOwnerSee(true);
+	ArmsMesh->SetRelativeLocation(FVector(0.f, 10.f, -160.f));
 	ArmsMesh->SetupAttachment(Camera);
 	ArmsMesh->bCastDynamicShadow = false;
 	ArmsMesh->CastShadow = false;
@@ -142,8 +144,6 @@ void ASGCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightA
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
-	if (GetMovementComponent()->IsFalling()) return;
-
 	TargetCameraHeight = CrouchedEyeHeight;
 }
 
@@ -201,8 +201,7 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction<FCrouchDelegate>("Crouch", IE_Pressed, this, &ACharacter::Crouch, false);
 	PlayerInputComponent->BindAction<FCrouchDelegate>("Crouch", IE_Released, this, &ACharacter::UnCrouch, false);
 
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::StartFire);
-	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASGCharacter::StopFire);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::Fire);
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::Reload);
 }
 

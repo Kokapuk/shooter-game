@@ -2,8 +2,6 @@
 
 #include "SGCharacter.h"
 #include "SGGameUserSettings.h"
-#include "SGPlayerState.h"
-#include "SGWeaponDataAsset.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -24,19 +22,8 @@ void USGWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(USGWeaponComponent, Equipped);
-	DOREPLIFETIME(USGWeaponComponent, Rounds);
-}
-
-void USGWeaponComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (!HasAuthority()) return;
-
-	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
-	check(OwningCharacter)
-
-	OwningCharacter->OnDie.AddUniqueDynamic(this, &USGWeaponComponent::AuthHandleOwnerDie);
+	DOREPLIFETIME_CONDITION(USGWeaponComponent, Rounds, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(USGWeaponComponent, bIsReloading, COND_OwnerOnly);
 }
 
 void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -44,18 +31,7 @@ void USGWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (HasAuthority() && IsValid(Equipped) && !bIsAutomaticallyFiring)
-	{
-		ShootingError = FMath::Clamp(
-			ShootingError - (Equipped->MaxSprayShootingError / Equipped->MaxShootingErrorRecoveryTime) * DeltaTime,
-			0.f, Equipped->MaxSprayShootingError);
-	}
-
-	if (HasAuthority() && bIsAutomaticallyFiring && IsValid(Equipped) && TimeToFire == 0.f)
-	{
-		AuthFire();
-	}
-	else if (IsValid(Equipped) && TimeToFire > 0.f)
+	if ((HasAuthority() || IsLocallyControlled()) && IsValid(Equipped) && TimeToFire > 0.f)
 	{
 		TimeToFire = FMath::Clamp(TimeToFire - DeltaTime, 0.f, Equipped->TimeBetweenShots);
 	}
@@ -73,43 +49,29 @@ void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 {
 	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
 	bIsReloading = false;
-	bIsAutomaticallyFiring = false;
 	TimeToFire = 0.f;
-	ShootingError = 0.f;
 
 	Equipped = Weapon;
 	OnRep_Equipped();
 	Rounds = IsValid(Weapon) ? Weapon->MagazineCapacity : 0;
 }
 
-void USGWeaponComponent::ServerStartFire_Implementation()
+bool USGWeaponComponent::CanFire() const
 {
-	if (!IsValid(Equipped)) return;
-
-	if (Equipped->bIsAutomatic) bIsAutomaticallyFiring = true;
-	else if (TimeToFire == 0.f) AuthFire();
+	return (HasAuthority() || IsLocallyControlled()) && IsValid(Equipped) && Rounds > 0 && TimeToFire == 0.f && !
+			bIsReloading;
 }
 
-void USGWeaponComponent::ServerStopFire_Implementation()
+void USGWeaponComponent::CosmeticFire()
 {
-	bIsAutomaticallyFiring = false;
+	if (!IsLocallyControlled()) return;
+	if (!Rounds) return ServerReload();
+	if (!CanFire()) return;
 
-	if (Rounds != 0) return;
-	ServerReload_Implementation();
-}
+	if (!HasAuthority()) TimeToFire = Equipped->TimeBetweenShots;
+	PlayFireAnimations();
 
-void USGWeaponComponent::AuthFire()
-{
-	if (!HasAuthority() || !IsValid(Equipped) || TimeToFire > 0.f || !Rounds ||
-		bIsReloading)
-	{
-		return;
-	}
-
-	TimeToFire = Equipped->TimeBetweenShots;
-	Rounds--;
-
-	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
 
 	const UCameraComponent* Camera = OwningCharacter->GetCamera();
@@ -118,18 +80,25 @@ void USGWeaponComponent::AuthFire()
 	const FVector End = Camera->GetComponentLocation() + GetFireDirection() * 35000.f;
 
 	FHitResult HitResult;
-	const bool bHit = UKismetSystemLibrary::LineTraceSingle(OwningCharacter, Camera->GetComponentLocation(), End,
-	                                                        UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-	                                                        false,
-	                                                        {}, EDrawDebugTrace::ForDuration, HitResult, true,
-	                                                        FLinearColor::Red, FLinearColor::Green, .5f);
+	UKismetSystemLibrary::LineTraceSingle(OwningCharacter, Camera->GetComponentLocation(), End,
+															UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
+															false,
+															{}, EDrawDebugTrace::ForDuration, HitResult, true,
+															FLinearColor::Red, FLinearColor::Green, .5f);
+
+	ServerFire(HitResult);
+}
+
+void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
+{
+	if (!CanFire()) return;
+
+	TimeToFire = Equipped->TimeBetweenShots;
+	Rounds--;
 
 	MultiFire(HitResult);
 
-	ShootingError = FMath::Clamp(ShootingError + Equipped->MaxSprayShootingError / 5, 0.f,
-	                             Equipped->MaxSprayShootingError);
-
-	if (!bHit) return;
+	if (!IsValid(HitResult.GetActor())) return;
 
 	AActor* HitActor = HitResult.GetActor();
 	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
@@ -141,6 +110,9 @@ void USGWeaponComponent::AuthFire()
 		HitCharacter->MultiPlayHitReactMontage(HitResult.BoneName);
 	}
 
+	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(OwningCharacter))
+	
 	HitActor->TakeDamage(HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage,
 	                     FDamageEvent(), OwningCharacter->GetController(), OwningCharacter);
 }
@@ -152,13 +124,11 @@ FVector USGWeaponComponent::GetFireDirection() const
 
 	const FRotator AimRotation = OwningCharacter->GetBaseAimRotation();
 	const float MovingShootingError = OwningCharacter->GetVelocity().Size() / OwningCharacter->GetCharacterMovement()->
-		MaxWalkSpeed * Equipped->MaxMovingShootingError;
+		MaxWalkSpeed * Equipped->MaxShootingError;
 
 	FVector AimDirection = UKismetMathLibrary::GetForwardVector(AimRotation);
-	const float RandomHorizontalAngle = FMath::FRandRange(-ShootingError - MovingShootingError,
-	                                                      ShootingError + MovingShootingError);
-	const float RandomVerticalAngle = FMath::FRandRange(-ShootingError - MovingShootingError,
-	                                                    ShootingError + MovingShootingError);
+	const float RandomHorizontalAngle = FMath::FRandRange(-MovingShootingError, MovingShootingError);
+	const float RandomVerticalAngle = FMath::FRandRange(-MovingShootingError, MovingShootingError);
 	AimDirection = AimDirection.RotateAngleAxis(RandomHorizontalAngle, UKismetMathLibrary::GetUpVector(AimRotation));
 	AimDirection = AimDirection.RotateAngleAxis(RandomVerticalAngle, UKismetMathLibrary::GetRightVector(AimRotation));
 
@@ -169,7 +139,6 @@ void USGWeaponComponent::AuthReset()
 {
 	if (!HasAuthority()) return;
 
-	bIsAutomaticallyFiring = false;
 	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
 	bIsReloading = false;
 	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
@@ -177,7 +146,7 @@ void USGWeaponComponent::AuthReset()
 
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 {
-	PlayFireAnimations();
+	if (!IsLocallyControlled()) PlayFireAnimations();
 
 	if (USGGameUserSettings::GetSGGameUserSettings()->bShowTracers)
 	{
@@ -353,15 +322,8 @@ void USGWeaponComponent::OnRep_Equipped() const
 	check(OwningCharacter)
 
 	OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(
-			Equipped == nullptr ? nullptr : Equipped->Mesh);
+		Equipped == nullptr ? nullptr : Equipped->Mesh);
 
 	OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(
-			Equipped == nullptr ? nullptr : Equipped->Mesh);
-}
-
-void USGWeaponComponent::AuthHandleOwnerDie()
-{
-	if (!HasAuthority()) return;
-
-	ServerStopFire_Implementation();
+		Equipped == nullptr ? nullptr : Equipped->Mesh);
 }

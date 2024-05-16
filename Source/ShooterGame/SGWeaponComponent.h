@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SGWeaponDataAsset.h"
 #include "Components/ActorComponent.h"
 #include "SGWeaponComponent.generated.h"
-
 
 class ASGCharacter;
 class USGWeaponDataAsset;
@@ -17,7 +17,6 @@ public:
 	USGWeaponComponent();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -36,12 +35,12 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetRounds() const { return Rounds; }
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Start Fire")
-	void ServerStartFire();
+	UFUNCTION(BlueprintPure)
+	bool CanFire() const;
 
-	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Stop Fire")
-	void ServerStopFire();
-	
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Fire")
+	void CosmeticFire();
+
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Reload")
 	void ServerReload();
 
@@ -54,21 +53,20 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly)
 	USoundBase* HitMarker;
-	
+
 	UPROPERTY(ReplicatedUsing=OnRep_Equipped)
 	USGWeaponDataAsset* Equipped;
 
-	uint8 bIsAutomaticallyFiring : 1;
 	float TimeToFire;
-	float ShootingError;
 
 	UPROPERTY(Replicated)
 	int32 Rounds;
 
+	UPROPERTY(Replicated)
 	uint8 bIsReloading : 1;
 
-	UFUNCTION(BlueprintCallable, DisplayName="Fire", BlueprintAuthorityOnly)
-	void AuthFire();
+	UFUNCTION(Server, Unreliable)
+	void ServerFire(const FHitResult& HitResult);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiFire(const FHitResult& HitResult);
@@ -91,7 +89,4 @@ private:
 
 	UFUNCTION()
 	void OnRep_Equipped() const;
-
-	UFUNCTION()
-	void AuthHandleOwnerDie();
 };

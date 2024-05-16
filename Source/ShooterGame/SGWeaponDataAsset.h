@@ -13,19 +13,10 @@ class SHOOTERGAME_API USGWeaponDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	bool bIsAutomatic;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	float TimeBetweenShots;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	float MaxSprayShootingError;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	float MaxShootingErrorRecoveryTime;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	float MaxMovingShootingError;
+	float MaxShootingError;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	float ReloadTime;

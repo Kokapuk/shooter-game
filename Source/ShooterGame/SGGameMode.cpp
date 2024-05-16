@@ -91,7 +91,7 @@ void ASGGameMode::Logout(AController* Exiting)
 
 	ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
 	check(IsValid(DetailedGameState))
-	
+
 	DetailedGameState->AuthUnregisterPlayerFromTeam(Player, Player->GetTeam());
 }
 
@@ -102,7 +102,8 @@ void ASGGameMode::FinishRound()
 
 	DetailedGameState->AuthSetRoundState(ERoundState::Finished);
 
-	if (DetailedGameState->GetTeamScore(ETeam::Red) == RoundsToWin || DetailedGameState->GetTeamScore(ETeam::Blue) == RoundsToWin)
+	if (DetailedGameState->GetTeamScore(ETeam::Red) == RoundsToWin || DetailedGameState->GetTeamScore(ETeam::Blue) ==
+		RoundsToWin)
 	{
 		return EndMatch();
 	}
@@ -119,6 +120,7 @@ void ASGGameMode::ResetPlayers()
 {
 	const ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
 	check(IsValid(DetailedGameState))
+
 
 	TArray<APlayerState*> Players = DetailedGameState->GetAllPlayers();
 
