@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
 
+class USGBlindnessComponent;
 class USGWeaponComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -57,6 +58,9 @@ public:
 	USGWeaponComponent* GetWeaponComponent() const { return Weapon; }
 
 	UFUNCTION(BlueprintPure)
+	USGBlindnessComponent* GetBlindnessComponent() const { return BlindnessComponent; }
+
+	UFUNCTION(BlueprintPure)
 	float GetMaxHealth() const { return MaxHealth; }
 
 	UFUNCTION(BlueprintPure)
@@ -89,6 +93,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly)
 	USGWeaponComponent* Weapon;
+
+	UPROPERTY(EditDefaultsOnly)
+	USGBlindnessComponent* BlindnessComponent;
 
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=1.f))
 	float MaxHealth;

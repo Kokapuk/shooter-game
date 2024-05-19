@@ -1,5 +1,6 @@
 #include "SGCharacter.h"
 
+#include "SGBlindnessComponent.h"
 #include "SGCharacterMovementComponent.h"
 #include "SGGameMode.h"
 #include "SGGameState.h"
@@ -68,6 +69,8 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	ThirdPersonWeaponMesh->SetupAttachment(GetMesh());
 
 	Weapon = CreateDefaultSubobject<USGWeaponComponent>("Weapon");
+
+	BlindnessComponent = CreateDefaultSubobject<USGBlindnessComponent>("BlindnessComponent");
 }
 
 void ASGCharacter::OnConstruction(const FTransform& Transform)
