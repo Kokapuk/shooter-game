@@ -23,9 +23,9 @@ ASGFlash::ASGFlash()
 	Light = CreateDefaultSubobject<UPointLightComponent>("Light");
 	Light->SetupAttachment(RootComponent);
 
-	MaxScale = 1.f;
-	MaxLightIntensity = 0.f;
-	MaxLocationOffset = 0.f;
+	MaxScale = .35f;
+	MaxLightIntensity = 15000.f;
+	MaxLocationOffset = 275.f;
 }
 
 void ASGFlash::BeginPlay()
@@ -89,21 +89,25 @@ void ASGFlash::AuthExplode()
 		                                                        UEngineTypes::ConvertToTraceType(ECC_Visibility), false,
 		                                                        {*Iterator}, EDrawDebugTrace::ForDuration, HitResult,
 		                                                        true, FLinearColor::Yellow, FLinearColor::Blue, 2.f);
+
 		if (bHit) continue;
 
 		const FRotator BaseAimRotation = Iterator->GetBaseAimRotation();
 		const float ClampedAimPitch = UKismetMathLibrary::ClampAngle(BaseAimRotation.Pitch, -90.f, 90.f);
 		const float ClampedAimYaw = UKismetMathLibrary::ClampAngle(BaseAimRotation.Yaw, -179.9f, 179.9f);
 		const FRotator ClampedAimRotation = FRotator(ClampedAimPitch, ClampedAimYaw, 0.f);
-		const FRotator CameraLookAtFlashRotation = UKismetMathLibrary::FindLookAtRotation(Camera->GetComponentLocation(), GetActorLocation());
+		const FRotator CameraLookAtFlashRotation = UKismetMathLibrary::FindLookAtRotation(
+			Camera->GetComponentLocation(), GetActorLocation());
 		const FRotator Diff = ClampedAimRotation - CameraLookAtFlashRotation;
 		const float HalfFieldOfView = Camera->FieldOfView / 2.f;
+		constexpr float TargetAspectRatio = 16.f / 9.f;
 
-		if (UKismetMathLibrary::Abs(Diff.Pitch) > HalfFieldOfView || UKismetMathLibrary::Abs(Diff.Yaw) >
-			HalfFieldOfView)
+		if (FMath::Abs(UKismetMathLibrary::ClampAngle(Diff.Pitch * TargetAspectRatio, -90.f, 90.f)) > HalfFieldOfView ||
+			FMath::Abs(FMath::ClampAngle(Diff.Yaw, -179.9f, 179.9f)) > HalfFieldOfView)
 		{
 			continue;
 		}
+
 
 		check(IsValid(BlindnessCurve))
 		Iterator->GetBlindnessComponent()->ClientBlind(BlindnessCurve);

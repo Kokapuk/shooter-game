@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
 
+class USGAbilityComponent;
 class USGBlindnessComponent;
 class USGWeaponComponent;
 class UInputComponent;
@@ -39,9 +40,6 @@ public:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
-	UPROPERTY(BlueprintAssignable)
-	FOnCharacterDie OnDie;
-
 	UFUNCTION(BlueprintPure)
 	USkeletalMeshComponent* GetArmsMesh() const { return ArmsMesh; }
 
@@ -59,6 +57,12 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	USGBlindnessComponent* GetBlindnessComponent() const { return BlindnessComponent; }
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Set Ability")
+	void ServerSetAbility(TSubclassOf<USGAbilityComponent> NewAbilityClass);
+	
+	UFUNCTION(BlueprintPure)
+	USGAbilityComponent* GetAbilityComponent() const { return AbilityComponent; }
 
 	UFUNCTION(BlueprintPure)
 	float GetMaxHealth() const { return MaxHealth; }
@@ -97,6 +101,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	USGBlindnessComponent* BlindnessComponent;
 
+	UPROPERTY(Replicated)
+	USGAbilityComponent* AbilityComponent;
+
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=1.f))
 	float MaxHealth;
 
@@ -128,6 +135,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void Reload() { Weapon->ServerReload(); }
+
+	UFUNCTION(BlueprintCallable)
+	void UtilizeAbility();
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Die")
 	void AuthDie();

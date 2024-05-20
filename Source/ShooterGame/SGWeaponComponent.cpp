@@ -98,7 +98,7 @@ void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
 
 	MultiFire(HitResult);
 
-	if (!IsValid(HitResult.GetActor())) return;
+	if (!HitResult.bBlockingHit) return;
 
 	AActor* HitActor = HitResult.GetActor();
 	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
@@ -282,36 +282,34 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 	check(OwningCharacter)
 
 	const AActor* HitActor = HitResult.GetActor();
+	if (!IsValid(HitActor)) return;
 
-	if (IsValid(HitActor))
+	UGameplayStatics::PlaySoundAtLocation(OwningCharacter,
+											  HitActor->CanBeDamaged()
+												  ? Equipped->BodyImpactCue
+												  : Equipped->SurfaceImpactCue, HitResult.Location);
+
+	if (!USGGameUserSettings::GetSGGameUserSettings()->bShowParticles)
 	{
-		UGameplayStatics::PlaySoundAtLocation(OwningCharacter,
-		                                      HitActor->CanBeDamaged()
-			                                      ? Equipped->BodyImpactCue
-			                                      : Equipped->SurfaceImpactCue, HitResult.Location);
-
-		if (!USGGameUserSettings::GetSGGameUserSettings()->bShowParticles)
-		{
-			return;
-		}
-
-		UParticleSystem* ImpactParticles = nullptr;
-
-		if (HitActor->CanBeDamaged())
-		{
-			ImpactParticles = HitResult.BoneName == "head" ? Equipped->HeadShotParticles : Equipped->BodyShotParticles;
-		}
-		else ImpactParticles = Equipped->SurfaceImpactParticles;
-
-		UGameplayStatics::SpawnEmitterAtLocation(OwningCharacter, ImpactParticles, HitResult.Location,
-		                                         HitResult.Normal.Rotation());
+		return;
 	}
+
+	UParticleSystem* ImpactParticles = nullptr;
+
+	if (HitActor->CanBeDamaged())
+	{
+		ImpactParticles = HitResult.BoneName == "head" ? Equipped->HeadShotParticles : Equipped->BodyShotParticles;
+	}
+	else ImpactParticles = Equipped->SurfaceImpactParticles;
+
+	UGameplayStatics::SpawnEmitterAtLocation(OwningCharacter, ImpactParticles, HitResult.Location,
+											 HitResult.Normal.Rotation());
 }
 
 void USGWeaponComponent::CosmeticPlayHitMarker()
 {
 	if (!IsLocallyControlled()) return;
-	check(HitMarker);
+	check(IsValid(HitMarker));
 
 	UGameplayStatics::PlaySound2D(this, HitMarker);
 }
@@ -319,11 +317,8 @@ void USGWeaponComponent::CosmeticPlayHitMarker()
 void USGWeaponComponent::OnRep_Equipped() const
 {
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
-	check(OwningCharacter)
+	check(IsValid(OwningCharacter))
 
-	OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(
-		Equipped == nullptr ? nullptr : Equipped->Mesh);
-
-	OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(
-		Equipped == nullptr ? nullptr : Equipped->Mesh);
+	OwningCharacter->GetFirstPersonWeaponMesh()->SetSkeletalMesh(!IsValid(Equipped) ? nullptr : Equipped->Mesh);
+	OwningCharacter->GetThirdPersonWeaponMesh()->SetSkeletalMesh(!IsValid(Equipped) ? nullptr : Equipped->Mesh);
 }

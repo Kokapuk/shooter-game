@@ -8,7 +8,7 @@
 class ASGCharacter;
 class USGWeaponDataAsset;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), DisplayName="Weapon Component")
 class SHOOTERGAME_API USGWeaponComponent : public UActorComponent
 {
 	GENERATED_BODY()

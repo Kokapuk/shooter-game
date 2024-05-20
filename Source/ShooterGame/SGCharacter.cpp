@@ -1,5 +1,6 @@
 #include "SGCharacter.h"
 
+#include "SGAbilityComponent.h"
 #include "SGBlindnessComponent.h"
 #include "SGCharacterMovementComponent.h"
 #include "SGGameMode.h"
@@ -88,6 +89,7 @@ void ASGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME(ASGCharacter, AbilityComponent)
 	DOREPLIFETIME(ASGCharacter, Health);
 	DOREPLIFETIME(ASGCharacter, bIsDead);
 }
@@ -109,8 +111,8 @@ void ASGCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	const FVector NewCameraLocation = UKismetMathLibrary::VInterpTo(Camera->GetRelativeLocation(),
-																	FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,
-																	10.f);
+	                                                                FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,
+	                                                                10.f);
 	Camera->SetRelativeLocation(NewCameraLocation);
 }
 
@@ -155,6 +157,15 @@ void ASGCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
 	TargetCameraHeight = BaseEyeHeight;
+}
+
+void ASGCharacter::ServerSetAbility_Implementation(const TSubclassOf<USGAbilityComponent> NewAbilityClass)
+{
+	if (!IsValid(NewAbilityClass)) return AbilityComponent->DestroyComponent();
+	if (IsValid(AbilityComponent)) AbilityComponent->DestroyComponent();
+	
+	AbilityComponent = NewObject<USGAbilityComponent>(this, NewAbilityClass);
+	AbilityComponent->RegisterComponent();
 }
 
 ETeam ASGCharacter::GetTeam() const
@@ -206,6 +217,15 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::Fire);
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::Reload);
+
+	PlayerInputComponent->BindAction("UtilizeAbility", IE_Pressed, this, &ASGCharacter::UtilizeAbility);
+}
+
+void ASGCharacter::UtilizeAbility()
+{
+	if (!IsValid(AbilityComponent)) return;
+
+	AbilityComponent->ServerUtilize();
 }
 
 void ASGCharacter::AuthDie()
@@ -265,6 +285,9 @@ void ASGCharacter::MultiSetDeadCollision_Implementation(const bool bNewDeadColli
 
 void ASGCharacter::HandleMatchBegin()
 {
+	check(IsValid(RedTeamMaterial))
+	check(IsValid(BlueTeamMaterial))
+
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	const ETeam Team = GetTeam();
 
@@ -290,6 +313,4 @@ void ASGCharacter::OnRep_IsDead()
 	check(IsValid(AnimInstance))
 
 	AnimInstance->Montage_Play(DeathMontage);
-
-	OnDie.Broadcast();
 }
