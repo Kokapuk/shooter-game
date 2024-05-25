@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
 
+class USGAbilityDataAsset;
 class USGAbilityComponent;
 class USGBlindnessComponent;
 class USGWeaponComponent;
@@ -59,10 +60,13 @@ public:
 	USGBlindnessComponent* GetBlindnessComponent() const { return BlindnessComponent; }
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Set Ability")
-	void ServerSetAbility(TSubclassOf<USGAbilityComponent> NewAbilityClass);
+	void ServerSetAbility(const USGAbilityDataAsset* NewAbility);
 	
 	UFUNCTION(BlueprintPure)
 	USGAbilityComponent* GetAbilityComponent() const { return AbilityComponent; }
+
+	template <class T>
+	T* GetAbilityComponent() const { return Cast<T>(AbilityComponent); }
 
 	UFUNCTION(BlueprintPure)
 	float GetMaxHealth() const { return MaxHealth; }

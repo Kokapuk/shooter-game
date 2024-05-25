@@ -8,8 +8,8 @@
 
 USGFlashAbilityComponent::USGFlashAbilityComponent()
 {
+	Cooldown = 7.f;
 	MaxDeployDistance = 1500.f;
-	CooldownTime = 7.f;
 }
 
 void USGFlashAbilityComponent::ServerUtilize_Implementation()

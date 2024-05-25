@@ -41,5 +41,5 @@ private:
 	void HandleMatchBegin();
 
 	UFUNCTION()
-	void HandleBlindnessProgress();
+	void HandleBlindnessProgress(const float Scale) { BlindnessScale = Scale; }
 };

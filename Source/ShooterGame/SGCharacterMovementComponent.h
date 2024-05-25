@@ -4,11 +4,12 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "SGCharacterMovementComponent.generated.h"
 
+struct FTimeline;
+
 UCLASS()
 class SHOOTERGAME_API USGCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_UCLASS_BODY()
-
 	class FSavedMove_SGCharacter : public FSavedMove_Character
 	{
 	public:
@@ -18,7 +19,7 @@ class SHOOTERGAME_API USGCharacterMovementComponent : public UCharacterMovementC
 		virtual void Clear() override;
 		virtual uint8 GetCompressedFlags() const override;
 		virtual void SetMoveFor(ACharacter* Character, float InDeltaTime, FVector const& NewAccel,
-								FNetworkPredictionData_Client_Character& ClientData) override;
+		                        FNetworkPredictionData_Client_Character& ClientData) override;
 		virtual void PrepMoveFor(ACharacter* Character) override;
 
 		uint8 bSavedWantsToDash : 1;
@@ -35,19 +36,29 @@ class SHOOTERGAME_API USGCharacterMovementComponent : public UCharacterMovementC
 	};
 
 public:
-	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
 	virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
-	virtual void OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity) override;
-
-	UPROPERTY(EditDefaultsOnly)
-	float DashStrength;
 
 	UFUNCTION(BlueprintCallable)
-	void Dash();
+	void Dash() { bWantsToDash = true; }
 
-	UFUNCTION()
-	void StopDash();
+	UFUNCTION(BlueprintPure)
+	bool CanDash() const;
+
+	UFUNCTION(BlueprintCallable, DisplayName="Reset", BlueprintAuthorityOnly)
+	void AuthReset() { LastDashWorldTime = 0.f; }
 
 	uint8 bWantsToDash : 1;
-};
 
+protected:
+	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
+	virtual void OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity) override;
+
+	void PerformDash();
+
+	UFUNCTION()
+	void FinishDash() { MaxAcceleration = SavedMaxAcceleration; }
+
+private:
+	float LastDashWorldTime;
+	float SavedMaxAcceleration;
+};

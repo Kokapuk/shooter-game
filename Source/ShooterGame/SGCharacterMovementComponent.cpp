@@ -1,13 +1,23 @@
 #include "SGCharacterMovementComponent.h"
 
+#include "SGCharacter.h"
+#include "SGDashAbilityComponent.h"
 #include "GameFramework/Character.h"
-#include "Kismet/KismetMathLibrary.h"
 
 USGCharacterMovementComponent::USGCharacterMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(
 	ObjectInitializer)
 {
-	DashStrength = 1400.f;
+	bCanWalkOffLedgesWhenCrouching = true;
+	NavAgentProps.bCanCrouch = true;
+	MaxWalkSpeed = 540.f;
+	MaxWalkSpeedCrouched = 240.f;
+	AirControl = 1.f;
+	CrouchedHalfHeight = 60.f;
+	PerchRadiusThreshold = 10.f;
+
 	bWantsToDash = false;
+	LastDashWorldTime = 0.f;
+	SavedMaxAcceleration = MaxAcceleration;
 }
 
 void USGCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
@@ -20,7 +30,6 @@ void USGCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 FNetworkPredictionData_Client* USGCharacterMovementComponent::GetPredictionData_Client() const
 {
 	check(IsValid(PawnOwner));
-	// check(PawnOwner->GetLocalRole() < ROLE_Authority);
 
 	if (!ClientPredictionData)
 	{
@@ -34,41 +43,71 @@ FNetworkPredictionData_Client* USGCharacterMovementComponent::GetPredictionData_
 	return ClientPredictionData;
 }
 
+bool USGCharacterMovementComponent::CanDash() const
+{
+	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	check(IsValid(OwningCharacter))
+
+	const USGDashAbilityComponent* DashAbilityComponent = OwningCharacter->GetAbilityComponent<
+		USGDashAbilityComponent>();
+	check(IsValid(DashAbilityComponent))
+
+	const float WorldTime = GetWorld()->GetTimeSeconds();
+
+	if (LastDashWorldTime > 0.f && LastDashWorldTime + DashAbilityComponent->GetCooldown() > WorldTime)
+	{
+		return false;
+	}
+
+	FVector DashDirection = Velocity.GetSafeNormal();
+	DashDirection.Z = 0.f;
+
+	if (DashDirection == FVector::ZeroVector) return false;
+
+	return true;
+}
+
 void USGCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVector& OldLocation,
                                                       const FVector& OldVelocity)
 {
 	Super::OnMovementUpdated(DeltaTime, OldLocation, OldVelocity);
 
-	if (!CharacterOwner)
-	{
-		return;
-	}
+	if (!CharacterOwner) return;
 
-	if (bWantsToDash)
-	{
-		bWantsToDash = false;
-
-		GroundFriction = 0.f;
-
-		FVector DodgeVelocity = UKismetMathLibrary::Normal(Velocity) * DashStrength;
-		DodgeVelocity.Z = 0.0f;
-
-		CharacterOwner->LaunchCharacter(DodgeVelocity, false, false);
-
-		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, this, &USGCharacterMovementComponent::StopDash, .45f);
-	}
+	if (bWantsToDash) PerformDash();
 }
 
-void USGCharacterMovementComponent::Dash()
+void USGCharacterMovementComponent::PerformDash()
 {
-	bWantsToDash = true;
-}
+	bWantsToDash = false;
 
-void USGCharacterMovementComponent::StopDash()
-{
-	GroundFriction = 8.f;
-	Velocity = UKismetMathLibrary::Normal(Velocity) * MaxWalkSpeed;
+	if (!CanDash()) return;
+
+	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
+	const USGDashAbilityComponent* DashAbilityComponent = OwningCharacter->GetAbilityComponent<
+		USGDashAbilityComponent>();
+
+	MaxAcceleration = 0;
+	LastDashWorldTime = GetWorld()->GetTimeSeconds();
+
+	const TSharedPtr<FRootMotionSource_ConstantForce> ConstantForce = MakeShared<FRootMotionSource_ConstantForce>();
+	ConstantForce->InstanceName = FName("ConstantForce");
+	ConstantForce->AccumulateMode = ERootMotionAccumulateMode::Additive;
+	ConstantForce->Priority = 5;
+	ConstantForce->Force = DashAbilityComponent->GetDistance() / DashAbilityComponent->GetDuration() * Velocity.
+		GetSafeNormal();
+	ConstantForce->Duration = DashAbilityComponent->GetDuration();
+	ConstantForce->StrengthOverTime = DashAbilityComponent->GetCurve();
+	ConstantForce->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::ClampVelocity;
+	ConstantForce->FinishVelocityParams.SetVelocity = FVector::ZeroVector;
+	ConstantForce->FinishVelocityParams.ClampVelocity = 1000.f;
+	ConstantForce->Settings.SetFlag(ERootMotionSourceSettingsFlags::IgnoreZAccumulate);
+
+	ApplyRootMotionSource(ConstantForce);
+
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, this, &USGCharacterMovementComponent::FinishDash,
+	                                       DashAbilityComponent->GetDuration());
 }
 
 bool USGCharacterMovementComponent::FSavedMove_SGCharacter::CanCombineWith(
@@ -108,7 +147,7 @@ void USGCharacterMovementComponent::FSavedMove_SGCharacter::SetMoveFor(ACharacte
 {
 	Super::SetMoveFor(Character, InDeltaTime, NewAccel, ClientData);
 
-	USGCharacterMovementComponent* CharacterMovement = Cast<USGCharacterMovementComponent>(
+	const USGCharacterMovementComponent* CharacterMovement = Cast<USGCharacterMovementComponent>(
 		Character->GetCharacterMovement());
 
 	if (CharacterMovement)

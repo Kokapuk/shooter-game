@@ -42,9 +42,9 @@ void ASGFlash::BeginPlay()
 
 	if (HasAuthority())
 	{
-		FOnTimelineEventStatic OnChargeFinished;
-		OnChargeFinished.BindUFunction(this, "AuthExplode");
-		ChargeTimeline.SetTimelineFinishedFunc(OnChargeFinished);
+		FOnTimelineEventStatic OnChargeFinish;
+		OnChargeFinish.BindUFunction(this, "AuthExplode");
+		ChargeTimeline.SetTimelineFinishedFunc(OnChargeFinish);
 	}
 
 	ChargeTimeline.PlayFromStart();
@@ -63,10 +63,8 @@ void ASGFlash::Tick(float DeltaSeconds)
 	ChargeTimeline.TickTimeline(DeltaSeconds);
 }
 
-void ASGFlash::HandleChargeProgress()
+void ASGFlash::HandleChargeProgress(const float Progress)
 {
-	const float Progress = ChargeCurve->GetFloatValue(ChargeTimeline.GetPlaybackPosition());
-
 	Mesh->SetRelativeScale3D(FVector(MaxScale * Progress));
 	Light->SetIntensity(MaxLightIntensity * Progress);
 	SetActorLocation(StartLocation + GetActorUpVector() * (MaxLocationOffset * Progress));

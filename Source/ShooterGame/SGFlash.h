@@ -52,7 +52,7 @@ protected:
 	USoundCue* BlindedCue;
 
 	UFUNCTION()
-	void HandleChargeProgress();
+	void HandleChargeProgress(const float Progress);
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Explode")
 	void AuthExplode();

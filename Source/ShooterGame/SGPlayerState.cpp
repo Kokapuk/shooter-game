@@ -1,6 +1,5 @@
 #include "SGPlayerState.h"
 
-#include "SGCharacter.h"
 #include "SGGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -18,6 +17,7 @@ void ASGPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASGPlayerState, Character);
+	DOREPLIFETIME(ASGPlayerState, Ability);
 }
 
 void ASGPlayerState::BeginPlay()
@@ -40,11 +40,9 @@ ETeam ASGPlayerState::GetTeam() const
 	return GameState->GetPlayerTeam(this);
 }
 
-bool ASGPlayerState::IsDead() const
+void ASGPlayerState::ServerSetAbility_Implementation(USGAbilityDataAsset* NewAbility)
 {
-	if (!IsValid(Character)) return false;
-
-	return Character->IsDead();
+	Ability = NewAbility;
 }
 
 void ASGPlayerState::AuthHandleMatchBegin()

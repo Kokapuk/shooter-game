@@ -14,7 +14,7 @@ void USGAbilityComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME_CONDITION(USGAbilityComponent, RemainingCooldownTime, COND_OwnerOnly)
+	DOREPLIFETIME_CONDITION(USGAbilityComponent, RemainingCooldown, COND_OwnerOnly)
 }
 
 void USGAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -24,10 +24,18 @@ void USGAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (!GetOwner()->HasAuthority()) return;
 
-	RemainingCooldownTime = FMath::Clamp(RemainingCooldownTime - DeltaTime, 0.f, CooldownTime);
+	RemainingCooldown = FMath::Clamp(RemainingCooldown - DeltaTime, 0.f, Cooldown);
+}
+
+void USGAbilityComponent::Utilize()
+{
+	CosmeticUtilize();
+	ServerUtilize();
 }
 
 void USGAbilityComponent::ServerUtilize_Implementation()
 {
-	RemainingCooldownTime = CooldownTime;
+	if (!CanBeUtilized()) return;
+	
+	RemainingCooldown = Cooldown;
 }

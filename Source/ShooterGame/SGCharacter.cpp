@@ -1,6 +1,7 @@
 #include "SGCharacter.h"
 
 #include "SGAbilityComponent.h"
+#include "SGAbilityDataAsset.h"
 #include "SGBlindnessComponent.h"
 #include "SGCharacterMovementComponent.h"
 #include "SGGameMode.h"
@@ -29,15 +30,6 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
 	Capsule->SetCapsuleHalfHeight(96.f);
 	Capsule->SetCapsuleRadius(55.f);
-
-	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
-	MovementComponent->bCanWalkOffLedgesWhenCrouching = true;
-	MovementComponent->NavAgentProps.bCanCrouch = true;
-	MovementComponent->MaxWalkSpeed = 540.f;
-	MovementComponent->MaxWalkSpeedCrouched = 240.f;
-	MovementComponent->AirControl = 1.f;
-	MovementComponent->CrouchedHalfHeight = 60.f;
-	MovementComponent->PerchRadiusThreshold = 10.f;
 
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	CharacterMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
@@ -159,12 +151,19 @@ void ASGCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 	TargetCameraHeight = BaseEyeHeight;
 }
 
-void ASGCharacter::ServerSetAbility_Implementation(const TSubclassOf<USGAbilityComponent> NewAbilityClass)
+void ASGCharacter::ServerSetAbility_Implementation(const USGAbilityDataAsset* NewAbility)
 {
-	if (!IsValid(NewAbilityClass)) return AbilityComponent->DestroyComponent();
-	if (IsValid(AbilityComponent)) AbilityComponent->DestroyComponent();
+	if (!IsValid(NewAbility))
+	{
+		if (IsValid(AbilityComponent)) AbilityComponent->DestroyComponent();
+		return;
+	}
 	
-	AbilityComponent = NewObject<USGAbilityComponent>(this, NewAbilityClass);
+	if (IsValid(AbilityComponent)) AbilityComponent->DestroyComponent();
+
+	check(IsValid(NewAbility->AbilityClass));
+	
+	AbilityComponent = NewObject<USGAbilityComponent>(this, NewAbility->AbilityClass);
 	AbilityComponent->RegisterComponent();
 }
 
@@ -189,6 +188,17 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	SetActorLocation(PlayerStart->GetActorLocation());
 	MultiResetAnimations();
 	MultiSetDeadCollision(false);
+
+	check(IsValid(Weapon))
+	Weapon->AuthReset();
+
+	check(IsValid(AbilityComponent))
+	AbilityComponent->AuthReset();
+
+	USGCharacterMovementComponent* DetailedCharacterMovement = Cast<USGCharacterMovementComponent>(GetCharacterMovement());
+	check(IsValid(DetailedCharacterMovement))
+
+	DetailedCharacterMovement->AuthReset();
 }
 
 void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
@@ -223,9 +233,9 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void ASGCharacter::UtilizeAbility()
 {
-	if (!IsValid(AbilityComponent)) return;
+	if (!IsValid(AbilityComponent) || !AbilityComponent->CanBeUtilized()) return;
 
-	AbilityComponent->ServerUtilize();
+	AbilityComponent->Utilize();
 }
 
 void ASGCharacter::AuthDie()

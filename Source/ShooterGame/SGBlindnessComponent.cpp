@@ -51,8 +51,3 @@ void USGBlindnessComponent::HandleMatchBegin()
 	UUserWidget* BlindnessWidget = CreateWidget(GetWorld(), BlindnessWidgetClass);
 	BlindnessWidget->AddToViewport();
 }
-
-void USGBlindnessComponent::HandleBlindnessProgress()
-{
-	BlindnessScale = BlindnessCurve->GetFloatValue(BlindnessTimeline.GetPlaybackPosition());
-}

@@ -5,6 +5,8 @@
 #include "SGAbilityComponent.generated.h"
 
 
+class USGAbilityDataAsset;
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Abstract, DisplayName="Ability Component")
 class SHOOTERGAME_API USGAbilityComponent : public UActorComponent
 {
@@ -18,18 +20,38 @@ public:
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintPure)
-	virtual bool CanBeUtilized() const { return RemainingCooldownTime == 0.f; }
+	virtual bool CanBeUtilized() const { return RemainingCooldown == 0.f; }
 
 	UFUNCTION(BlueprintPure)
-	float GetRemainingCooldown() const { return RemainingCooldownTime; }
+	float GetCooldown() const { return Cooldown; }
 
-	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Utilize")
-	void ServerUtilize();
+	UFUNCTION(BlueprintPure)
+	float GetRemainingCooldown() const { return RemainingCooldown; }
+
+	UFUNCTION(BlueprintPure)
+	USGAbilityDataAsset* GetAbilityDataAsset() const { return AbilityDataAsset; }
+
+	UFUNCTION(BlueprintCallable)
+	void Utilize();
+
+	UFUNCTION(BlueprintCallable, DisplayName="Reset", BlueprintAuthorityOnly)
+	void AuthReset() { RemainingCooldown = 0.f; }
 
 protected:
-	UPROPERTY(EditDefaultsOnly)
-	float CooldownTime;
+	virtual void CosmeticUtilize()
+	{
+	};
 
+	UFUNCTION(Server, Reliable)
+	void ServerUtilize();
+
+	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=0.f))
+	float Cooldown;
+
+	UPROPERTY(EditDefaultsOnly)
+	USGAbilityDataAsset* AbilityDataAsset;
+
+private:
 	UPROPERTY(Replicated)
-	float RemainingCooldownTime;
+	float RemainingCooldown;
 };

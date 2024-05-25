@@ -13,8 +13,8 @@ class SHOOTERGAME_API USGFlashAbilityComponent : public USGAbilityComponent
 
 public:
 	USGFlashAbilityComponent();
-	
-	virtual void ServerUtilize_Implementation() override; 
+
+	virtual void ServerUtilize_Implementation() override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly)
