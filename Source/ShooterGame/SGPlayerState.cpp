@@ -17,7 +17,9 @@ void ASGPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASGPlayerState, Character);
-	DOREPLIFETIME(ASGPlayerState, Ability);
+	DOREPLIFETIME_CONDITION(ASGPlayerState, Ability, COND_OwnerOnly);
+	DOREPLIFETIME(ASGPlayerState, Kills);
+	DOREPLIFETIME(ASGPlayerState, Deaths);
 }
 
 void ASGPlayerState::BeginPlay()
@@ -25,7 +27,7 @@ void ASGPlayerState::BeginPlay()
 	Super::BeginPlay();
 
 	if (!HasAuthority()) return;
-	
+
 	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
 	check(IsValid(GameState))
 
@@ -45,10 +47,17 @@ void ASGPlayerState::ServerSetAbility_Implementation(USGAbilityDataAsset* NewAbi
 	Ability = NewAbility;
 }
 
+void ASGPlayerState::AuthHandleKill()
+{
+	if (!HasAuthority()) return;
+
+	Kills++;
+}
+
 void ASGPlayerState::AuthHandleMatchBegin()
 {
 	if (!HasAuthority()) return;
-	
+
 	ASGCharacter* ControlledCharacter = GetPawn<ASGCharacter>();
 	if (!IsValid(ControlledCharacter)) return;
 
@@ -58,4 +67,9 @@ void ASGPlayerState::AuthHandleMatchBegin()
 void ASGPlayerState::MultiHandleDie_Implementation()
 {
 	OnDie.Broadcast();
+
+	if (HasAuthority())
+	{
+		Deaths++;
+	}
 }

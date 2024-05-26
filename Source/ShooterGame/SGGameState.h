@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
+#include "GameFramework/PlayerState.h"
 #include "SGGameState.generated.h"
 
 UENUM(BlueprintType)
@@ -36,6 +37,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundBegin);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundFinish);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnKill, APlayerState*, Killer, APlayerState*, Victim); 
+
 UCLASS()
 class SHOOTERGAME_API ASGGameState : public AGameState
 {
@@ -53,6 +56,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnRoundFinish OnRoundFinish;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnKill OnKill;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
@@ -74,6 +80,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Unregister Player From Team")
 	void AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETeam Team);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiHandleKill(APlayerState* Killer, APlayerState* Victim);
 
 	UFUNCTION(BlueprintPure)
 	TArray<APlayerState*> GetTeamPlayers(const ETeam Team) const;

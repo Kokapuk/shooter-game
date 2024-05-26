@@ -103,7 +103,7 @@ int32 ASGGameState::GetTeamScore(const ETeam Team) const
 	case ETeam::Blue:
 		return BlueTeamScore;
 	default:
-		return -1;
+		return 0;
 	}
 }
 
@@ -169,6 +169,11 @@ void ASGGameState::AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETea
 	case ETeam::None:
 		Spectators.Remove(Player);
 	}
+}
+
+void ASGGameState::MultiHandleKill_Implementation(APlayerState* Killer, APlayerState* Victim)
+{
+	OnKill.Broadcast(Killer, Victim);
 }
 
 void ASGGameState::OnRep_ShooterMatchState()

@@ -3,6 +3,7 @@
 #include "SGCharacter.h"
 #include "SGDashAbilityComponent.h"
 #include "GameFramework/Character.h"
+#include "Net/UnrealNetwork.h"
 
 USGCharacterMovementComponent::USGCharacterMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(
 	ObjectInitializer)
@@ -67,6 +68,14 @@ bool USGCharacterMovementComponent::CanDash() const
 	return true;
 }
 
+void USGCharacterMovementComponent::AuthReset()
+{
+	if (!GetOwner()->HasAuthority()) return;
+
+	Reset();
+	ClientReset();
+}
+
 void USGCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVector& OldLocation,
                                                       const FVector& OldVelocity)
 {
@@ -91,11 +100,10 @@ void USGCharacterMovementComponent::PerformDash()
 	LastDashWorldTime = GetWorld()->GetTimeSeconds();
 
 	const TSharedPtr<FRootMotionSource_ConstantForce> ConstantForce = MakeShared<FRootMotionSource_ConstantForce>();
-	ConstantForce->InstanceName = FName("ConstantForce");
+	ConstantForce->InstanceName = "DashConstantForce";
 	ConstantForce->AccumulateMode = ERootMotionAccumulateMode::Additive;
 	ConstantForce->Priority = 5;
-	ConstantForce->Force = DashAbilityComponent->GetDistance() / DashAbilityComponent->GetDuration() * Velocity.
-		GetSafeNormal();
+	ConstantForce->Force = DashAbilityComponent->GetDistance() / DashAbilityComponent->GetDuration() * Velocity.GetSafeNormal();
 	ConstantForce->Duration = DashAbilityComponent->GetDuration();
 	ConstantForce->StrengthOverTime = DashAbilityComponent->GetCurve();
 	ConstantForce->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::ClampVelocity;
@@ -105,9 +113,21 @@ void USGCharacterMovementComponent::PerformDash()
 
 	ApplyRootMotionSource(ConstantForce);
 
-	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, this, &USGCharacterMovementComponent::FinishDash,
+	GetWorld()->GetTimerManager().SetTimer(DashTimerHandle, this, &USGCharacterMovementComponent::FinishDash,
 	                                       DashAbilityComponent->GetDuration());
+}
+
+void USGCharacterMovementComponent::Reset()
+{
+	LastDashWorldTime = 0.f;
+	RemoveRootMotionSource("DashConstantForce");
+	GetWorld()->GetTimerManager().ClearTimer(DashTimerHandle);
+	MaxAcceleration = SavedMaxAcceleration;
+}
+
+void USGCharacterMovementComponent::ClientReset_Implementation()
+{
+	Reset();
 }
 
 bool USGCharacterMovementComponent::FSavedMove_SGCharacter::CanCombineWith(

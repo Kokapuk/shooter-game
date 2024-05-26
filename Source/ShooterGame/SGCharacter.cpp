@@ -117,7 +117,7 @@ bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEven
 	const ASGCharacter* Damager = Cast<ASGCharacter>(DamageCauser);
 	check(IsValid(Damager))
 
-	if ((!GameMode->IsFriendlyFireAllowed() && Damager->GetTeam() == GetTeam()))
+	if (!GameMode->IsFriendlyFireAllowed() && Damager->GetTeam() == GetTeam())
 	{
 		return false;
 	}
@@ -132,7 +132,11 @@ float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	if (!ShouldTakeDamage(ActualDamage, DamageEvent, EventInstigator, DamageCauser)) return 0.f;
 
 	Health -= ActualDamage;
-	if (Health == 0.f) AuthDie();
+	
+	if (Health == 0.f)
+	{
+		AuthDie(DamageCauser);
+	}
 
 	return ActualDamage;
 }
@@ -158,11 +162,11 @@ void ASGCharacter::ServerSetAbility_Implementation(const USGAbilityDataAsset* Ne
 		if (IsValid(AbilityComponent)) AbilityComponent->DestroyComponent();
 		return;
 	}
-	
+
 	if (IsValid(AbilityComponent)) AbilityComponent->DestroyComponent();
 
 	check(IsValid(NewAbility->AbilityClass));
-	
+
 	AbilityComponent = NewObject<USGAbilityComponent>(this, NewAbility->AbilityClass);
 	AbilityComponent->RegisterComponent();
 }
@@ -195,7 +199,8 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	check(IsValid(AbilityComponent))
 	AbilityComponent->AuthReset();
 
-	USGCharacterMovementComponent* DetailedCharacterMovement = Cast<USGCharacterMovementComponent>(GetCharacterMovement());
+	USGCharacterMovementComponent* DetailedCharacterMovement = Cast<USGCharacterMovementComponent>(
+		GetCharacterMovement());
 	check(IsValid(DetailedCharacterMovement))
 
 	DetailedCharacterMovement->AuthReset();
@@ -238,7 +243,7 @@ void ASGCharacter::UtilizeAbility()
 	AbilityComponent->Utilize();
 }
 
-void ASGCharacter::AuthDie()
+void ASGCharacter::AuthDie(AActor* Killer)
 {
 	if (!HasAuthority()) return;
 
@@ -250,7 +255,7 @@ void ASGCharacter::AuthDie()
 
 	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
 	check(IsValid(DetailedPlayerState));
-
+	
 	ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, GetActorLocation(),
 	                                                                  GetActorRotation());
 	GetController()->Possess(SpectatorPawn);
@@ -259,6 +264,19 @@ void ASGCharacter::AuthDie()
 	OnRep_IsDead();
 
 	DetailedPlayerState->MultiHandleDie();
+
+	const APawn* KillerPawn = Cast<APawn>(Killer);
+	check(IsValid(KillerPawn))
+
+	ASGPlayerState* KillerPlayerState = KillerPawn->GetPlayerState<ASGPlayerState>();
+	check(IsValid(KillerPlayerState))
+
+	KillerPlayerState->AuthHandleKill();
+
+	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
+	check(IsValid(GameState))
+
+	GameState->MultiHandleKill(KillerPlayerState, DetailedPlayerState);
 }
 
 void ASGCharacter::MultiResetAnimations_Implementation()

@@ -45,7 +45,7 @@ public:
 	bool CanDash() const;
 
 	UFUNCTION(BlueprintCallable, DisplayName="Reset", BlueprintAuthorityOnly)
-	void AuthReset() { LastDashWorldTime = 0.f; }
+	void AuthReset();
 
 	uint8 bWantsToDash : 1;
 
@@ -58,7 +58,13 @@ protected:
 	UFUNCTION()
 	void FinishDash() { MaxAcceleration = SavedMaxAcceleration; }
 
+	UFUNCTION(Client, Reliable)
+	void ClientReset();
+
+	void Reset();
+
 private:
 	float LastDashWorldTime;
 	float SavedMaxAcceleration;
+	FTimerHandle DashTimerHandle;
 };

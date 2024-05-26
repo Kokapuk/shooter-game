@@ -14,9 +14,12 @@ class SHOOTERGAME_API USGFlashAbilityComponent : public USGAbilityComponent
 public:
 	USGFlashAbilityComponent();
 
+	virtual bool CanBeUtilized() const override { return Super::CanBeUtilized() && LineTrace().bBlockingHit; }
 	virtual void ServerUtilize_Implementation() override;
 
 protected:
+	FHitResult LineTrace() const;
+
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<ASGFlash> FlashClass;
 

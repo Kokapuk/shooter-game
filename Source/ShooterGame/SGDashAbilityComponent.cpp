@@ -46,8 +46,6 @@ float USGDashAbilityComponent::GetDuration() const
 
 void USGDashAbilityComponent::CosmeticUtilize()
 {
-	if (!CanBeUtilized()) return;
-
 	Super::CosmeticUtilize();
 
 	const ACharacter* OwningCharacter = Cast<ACharacter>(GetOwner());

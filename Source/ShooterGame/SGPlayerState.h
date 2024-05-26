@@ -9,7 +9,7 @@
 class USGAbilityDataAsset;
 enum class ETeam : uint8;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDie);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDie);
 
 UCLASS()
 class SHOOTERGAME_API ASGPlayerState : public APlayerState
@@ -18,7 +18,7 @@ class SHOOTERGAME_API ASGPlayerState : public APlayerState
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnPlayerDie OnDie;
+	FOnDie OnDie;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
@@ -41,8 +41,16 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool IsDead() const { return IsValid(Character) ? Character->IsDead() : false; }
 
+	UFUNCTION(BlueprintPure)
+	int32 GetKills() const { return Kills; }
+
+	UFUNCTION(BlueprintPure)
+	int32 GetDeaths() const { return Deaths; }
+
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiHandleDie();
+
+	void AuthHandleKill();
 
 protected:
 	UPROPERTY(Replicated, VisibleInstanceOnly)
@@ -50,6 +58,12 @@ protected:
 
 	UPROPERTY(Replicated)
 	USGAbilityDataAsset* Ability;
+
+	UPROPERTY(Replicated)
+	int32 Kills;
+
+	UPROPERTY(Replicated)
+	int32 Deaths;
 
 	UFUNCTION()
 	void AuthHandleMatchBegin();

@@ -144,7 +144,7 @@ protected:
 	void UtilizeAbility();
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Die")
-	void AuthDie();
+	void AuthDie(AActor* Killer);
 
 	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, DisplayName="Reset Animations")
 	void MultiResetAnimations();
