@@ -18,7 +18,7 @@ USGCharacterMovementComponent::USGCharacterMovementComponent(const FObjectInitia
 
 	bWantsToDash = false;
 	LastDashWorldTime = 0.f;
-	SavedMaxAcceleration = MaxAcceleration;
+	SavedMaxAcceleration = 0.f;
 }
 
 void USGCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
@@ -26,6 +26,13 @@ void USGCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 	Super::UpdateFromCompressedFlags(Flags);
 
 	bWantsToDash = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
+}
+
+void USGCharacterMovementComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SavedMaxAcceleration = MaxAcceleration;
 }
 
 FNetworkPredictionData_Client* USGCharacterMovementComponent::GetPredictionData_Client() const

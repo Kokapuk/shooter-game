@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "SGWeaponDataAsset.generated.h"
 
+class ASGTracer;
 class USoundCue;
 
 UCLASS()
@@ -46,7 +47,7 @@ public:
 	UAnimMontage* ThirdPersonReloadMontage;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	TSubclassOf<AActor> TracerClass;
+	TSubclassOf<ASGTracer> TracerClass;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	USoundBase* SurfaceImpactCue;

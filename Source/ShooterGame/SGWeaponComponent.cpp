@@ -2,6 +2,7 @@
 
 #include "SGCharacter.h"
 #include "SGGameUserSettings.h"
+#include "SGTracer.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -59,7 +60,7 @@ void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 bool USGWeaponComponent::CanFire() const
 {
 	return (HasAuthority() || IsLocallyControlled()) && IsValid(Equipped) && Rounds > 0 && TimeToFire == 0.f && !
-			bIsReloading;
+		bIsReloading;
 }
 
 void USGWeaponComponent::CosmeticFire()
@@ -81,10 +82,10 @@ void USGWeaponComponent::CosmeticFire()
 
 	FHitResult HitResult;
 	UKismetSystemLibrary::LineTraceSingle(OwningCharacter, Camera->GetComponentLocation(), End,
-															UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-															false,
-															{}, EDrawDebugTrace::ForDuration, HitResult, true,
-															FLinearColor::Red, FLinearColor::Green, .5f);
+	                                      UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
+	                                      false,
+	                                      {}, EDrawDebugTrace::ForDuration, HitResult, true,
+	                                      FLinearColor::Red, FLinearColor::Green, .5f);
 
 	ServerFire(HitResult);
 }
@@ -112,7 +113,7 @@ void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
 
 	ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
-	
+
 	HitActor->TakeDamage(HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage,
 	                     FDamageEvent(), OwningCharacter->GetController(), OwningCharacter);
 }
@@ -245,32 +246,27 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 	const ASGCharacter* OwningCharacter = Cast<ASGCharacter>(GetOwner());
 	check(IsValid(OwningCharacter))
 
-	const AActor* HitActor = HitResult.GetActor();
+	const FVector Start = HitResult.TraceStart;
+	const FVector End = HitResult.bBlockingHit ? HitResult.Location : HitResult.TraceEnd;
+	USkeletalMeshComponent* WeaponMesh;
 
 	if (IsLocallyControlled())
 	{
-		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetFirstPersonWeaponMesh();
-		check(IsValid(WeaponMesh))
-
-		GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
-		                               UKismetMathLibrary::FindLookAtRotation(
-			                               WeaponMesh->GetComponentLocation(),
-			                               IsValid(HitResult.Actor.Get())
-				                               ? HitResult.Location
-				                               : HitResult.TraceEnd));
+		WeaponMesh = OwningCharacter->GetFirstPersonWeaponMesh();
 	}
-	else if (!IsLocallyControlled())
+	else
 	{
-		const USkeletalMeshComponent* WeaponMesh = OwningCharacter->GetThirdPersonWeaponMesh();
-		check(IsValid(WeaponMesh))
-
-		GetWorld()->SpawnActor<AActor>(Equipped->TracerClass, WeaponMesh->GetSocketLocation("MuzzleFlash"),
-		                               UKismetMathLibrary::FindLookAtRotation(
-			                               WeaponMesh->GetComponentLocation(),
-			                               IsValid(HitActor)
-				                               ? HitResult.Location
-				                               : HitResult.TraceEnd));
+		WeaponMesh = OwningCharacter->GetThirdPersonWeaponMesh();
 	}
+
+	check(IsValid(WeaponMesh))
+
+	const FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(WeaponMesh->GetComponentLocation(), End);
+	const FTransform Transform = FTransform(Rotation, WeaponMesh->GetSocketLocation("MuzzleFlash"));
+
+	ASGTracer* Tracer = GetWorld()->SpawnActorDeferred<ASGTracer>(Equipped->TracerClass, Transform);
+	Tracer->SetDistanceToTravel((End - Start).Size());
+	Tracer->FinishSpawning(Transform);
 }
 
 void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
@@ -285,9 +281,9 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 	if (!IsValid(HitActor)) return;
 
 	UGameplayStatics::PlaySoundAtLocation(OwningCharacter,
-											  HitActor->CanBeDamaged()
-												  ? Equipped->BodyImpactCue
-												  : Equipped->SurfaceImpactCue, HitResult.Location);
+	                                      HitActor->CanBeDamaged()
+		                                      ? Equipped->BodyImpactCue
+		                                      : Equipped->SurfaceImpactCue, HitResult.Location);
 
 	if (!USGGameUserSettings::GetSGGameUserSettings()->bShowParticles)
 	{
@@ -303,7 +299,7 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 	else ImpactParticles = Equipped->SurfaceImpactParticles;
 
 	UGameplayStatics::SpawnEmitterAtLocation(OwningCharacter, ImpactParticles, HitResult.Location,
-											 HitResult.Normal.Rotation());
+	                                         HitResult.Normal.Rotation());
 }
 
 void USGWeaponComponent::CosmeticPlayHitMarker()
