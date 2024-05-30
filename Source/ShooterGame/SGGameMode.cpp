@@ -5,6 +5,7 @@
 #include "SGPlayerController.h"
 #include "SGPlayerStart.h"
 #include "SGPlayerState.h"
+#include "SGSpectatorPawn.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/SpectatorPawn.h"
 #include "Kismet/GameplayStatics.h"
@@ -33,7 +34,11 @@ UClass* ASGGameMode::GetDefaultPawnClassForController_Implementation(AController
 	const ASGPlayerState* PlayerState = InController->GetPlayerState<ASGPlayerState>();
 	check(IsValid(PlayerState));
 
-	if (PlayerState->GetTeam() == ETeam::None) return SpectatorClass;
+	if (PlayerState->GetTeam() == ETeam::None)
+	{
+		return SpectatorClass;
+	}
+	
 	return DefaultPawnClass;
 }
 
@@ -122,26 +127,32 @@ void ASGGameMode::ResetPlayers()
 	check(IsValid(DetailedGameState))
 
 
-	TArray<APlayerState*> Players = DetailedGameState->GetAllPlayers();
+	TArray<APlayerState*> Players = DetailedGameState->GetPlayers();
 
 	for (int32 i = 0; i < Players.Num(); ++i)
 	{
-		const ASGPlayerState* PlayerState = Cast<ASGPlayerState>(Players[i]);
+		ASGPlayerState* PlayerState = Cast<ASGPlayerState>(Players[i]);
 		check(IsValid(PlayerState))
 
 		ASGPlayerController* Controller = Cast<ASGPlayerController>(PlayerState->GetOwner());
-		check(Controller)
+		check(IsValid(Controller))
 
 		const AActor* PlayerStart = FindPlayerStart(Controller);
 		if (!IsValid(PlayerStart)) continue;
 
 		ASGCharacter* Character = PlayerState->GetCharacter();
-		check(Character)
+		check(IsValid(Character))
 
 		if (PlayerState->IsDead())
 		{
-			Controller->GetPawn()->Destroy();
+			ASGSpectatorPawn* SpectatorPawn = Controller->GetPawn<ASGSpectatorPawn>();
+			check(IsValid(SpectatorPawn))
+
+			SpectatorPawn->ClientHideWidgets();
+			SpectatorPawn->Destroy();
+			
 			Controller->Possess(Character);
+			PlayerState->SetIsSpectator(false);
 		}
 
 		Controller->ClientResetControlRotation(PlayerStart->GetActorRotation());

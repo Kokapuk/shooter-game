@@ -19,8 +19,8 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(Client, Reliable, BlueprintCallable, DisplayName="Blind")
-	void ClientBlind(UCurveFloat* NewBlindnessCurve);
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, DisplayName="Blind")
+	void MultiBlind(UCurveFloat* NewBlindnessCurve);
 
 	UFUNCTION(BlueprintPure)
 	float GetBlindnessScale() const { return BlindnessScale; }
@@ -30,6 +30,7 @@ protected:
 	TSubclassOf<UUserWidget> BlindnessWidgetClass;
 
 private:
+
 	FTimeline BlindnessTimeline;
 
 	UPROPERTY()
@@ -37,8 +38,11 @@ private:
 
 	float BlindnessScale;
 
-	UFUNCTION()
-	void HandleMatchBegin();
+	UFUNCTION(BlueprintCosmetic, DisplayName="HandleOwningPlayerDie")
+	void CosmeticHandleMatchBegin();
+
+	UFUNCTION(BlueprintCosmetic, DisplayName="HandleOwningPlayerDie")
+	void CosmeticHandleOwningPlayerDie();
 
 	UFUNCTION()
 	void HandleBlindnessProgress(const float Scale) { BlindnessScale = Scale; }

@@ -41,7 +41,7 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	Camera->SetupAttachment(CharacterMesh);
 	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 	Camera->SetRelativeScale3D(FVector(.5f));
-	Camera->SetFieldOfView(103);
+	Camera->SetFieldOfView(103.f);
 	Camera->bUsePawnControlRotation = true;
 
 	ArmsMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ArmsMesh");
@@ -256,10 +256,11 @@ void ASGCharacter::AuthDie(AActor* Killer)
 	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
 	check(IsValid(DetailedPlayerState));
 	
-	ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, GetActorLocation(),
+	ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, Camera->GetComponentLocation(),
 	                                                                  GetActorRotation());
 	GetController()->Possess(SpectatorPawn);
 
+	DetailedPlayerState->SetIsSpectator(true);
 	bIsDead = true;
 	OnRep_IsDead();
 
@@ -312,6 +313,12 @@ void ASGCharacter::MultiSetDeadCollision_Implementation(const bool bNewDeadColli
 }
 
 void ASGCharacter::HandleMatchBegin()
+{
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, this, &ASGCharacter::UpdateMeshesColor, .2f, false);
+}
+
+void ASGCharacter::UpdateMeshesColor()
 {
 	check(IsValid(RedTeamMaterial))
 	check(IsValid(BlueTeamMaterial))

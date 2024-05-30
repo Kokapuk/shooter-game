@@ -58,10 +58,8 @@ void ASGPlayerState::AuthHandleMatchBegin()
 {
 	if (!HasAuthority()) return;
 
-	ASGCharacter* ControlledCharacter = GetPawn<ASGCharacter>();
-	if (!IsValid(ControlledCharacter)) return;
-
-	Character = ControlledCharacter;
+	SetIsSpectator(GetTeam() == ETeam::None);
+	Character = GetPawn<ASGCharacter>();
 }
 
 void ASGPlayerState::MultiHandleDie_Implementation()

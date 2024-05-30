@@ -26,6 +26,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool IsLocallyControlled() const;
 
+	UFUNCTION(BlueprintPure)
+	bool IsOwnerLocalViewTarget() const;
+
 	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Equip")
 	void ServerEquip(USGWeaponDataAsset* Weapon);
 

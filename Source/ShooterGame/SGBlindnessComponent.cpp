@@ -1,6 +1,7 @@
 #include "SGBlindnessComponent.h"
 
 #include "SGGameState.h"
+#include "SGPlayerState.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TimelineComponent.h"
 #include "GameFramework/Character.h"
@@ -17,9 +18,9 @@ void USGBlindnessComponent::BeginPlay()
 	Super::BeginPlay();
 
 	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
-	check(GameState)
+	check(IsValid(GameState))
 
-	GameState->OnMatchBegin.AddUniqueDynamic(this, &USGBlindnessComponent::HandleMatchBegin);
+	GameState->OnMatchBegin.AddUniqueDynamic(this, &USGBlindnessComponent::CosmeticHandleMatchBegin);
 }
 
 void USGBlindnessComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -30,8 +31,19 @@ void USGBlindnessComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	BlindnessTimeline.TickTimeline(DeltaTime);
 }
 
-void USGBlindnessComponent::ClientBlind_Implementation(UCurveFloat* NewBlindnessCurve)
+void USGBlindnessComponent::MultiBlind_Implementation(UCurveFloat* NewBlindnessCurve)
 {
+	const APawn* OwningPawn = GetOwner<APawn>();
+	check(IsValid(OwningPawn))
+	
+	const APlayerState* PlayerState = GetWorld()->GetFirstPlayerController()->GetPlayerState<APlayerState>();
+	check(IsValid(PlayerState))
+
+	if (!OwningPawn->IsLocallyControlled() && !PlayerState->IsSpectator())
+	{
+		return;
+	}
+	
 	BlindnessCurve = NewBlindnessCurve;
 
 	FOnTimelineFloat OnBlindnessProgress;
@@ -41,13 +53,24 @@ void USGBlindnessComponent::ClientBlind_Implementation(UCurveFloat* NewBlindness
 	BlindnessTimeline.PlayFromStart();
 }
 
-void USGBlindnessComponent::HandleMatchBegin()
+void USGBlindnessComponent::CosmeticHandleMatchBegin()
 {
-	const ACharacter* OwningCharacter = Cast<ACharacter>(GetOwner());
-	check(IsValid(OwningCharacter))
+	const APawn* OwningPawn = Cast<APawn>(GetOwner());
+	check(IsValid(OwningPawn))
 
-	if (!OwningCharacter->IsLocallyControlled()) return;
+	if (!OwningPawn->IsLocallyControlled()) return;
 
 	UUserWidget* BlindnessWidget = CreateWidget(GetWorld(), BlindnessWidgetClass);
 	BlindnessWidget->AddToViewport();
+
+	ASGPlayerState* PlayerState = OwningPawn->GetPlayerState<ASGPlayerState>();
+	check(IsValid(PlayerState))
+
+	PlayerState->OnDie.AddUniqueDynamic(this, &USGBlindnessComponent::CosmeticHandleOwningPlayerDie);
+}
+
+void USGBlindnessComponent::CosmeticHandleOwningPlayerDie()
+{
+	BlindnessTimeline.Stop();
+	BlindnessScale = 0.f;
 }

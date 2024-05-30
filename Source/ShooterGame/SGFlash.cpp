@@ -78,6 +78,8 @@ void ASGFlash::AuthExplode()
 
 	for (TActorIterator<ASGCharacter> Iterator(GetWorld()); Iterator; ++Iterator)
 	{
+		if (Iterator->IsDead()) continue;
+		
 		const UCameraComponent* Camera = Iterator->GetCamera();
 		check(IsValid(Camera))
 
@@ -108,7 +110,7 @@ void ASGFlash::AuthExplode()
 
 
 		check(IsValid(BlindnessCurve))
-		Iterator->GetBlindnessComponent()->ClientBlind(BlindnessCurve);
+		Iterator->GetBlindnessComponent()->MultiBlind(BlindnessCurve);
 		bBlinded = true;
 	}
 

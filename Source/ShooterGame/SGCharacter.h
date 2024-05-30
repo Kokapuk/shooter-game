@@ -154,9 +154,12 @@ protected:
 
 private:
 	float TargetCameraHeight;
-
+	
 	UFUNCTION()
 	void HandleMatchBegin();
+
+	UFUNCTION()
+	void UpdateMeshesColor();
 
 	UFUNCTION()
 	void OnRep_IsDead();

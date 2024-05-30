@@ -15,14 +15,16 @@ class SHOOTERGAME_API USGAbilityComponent : public UActorComponent
 public:
 	USGAbilityComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UFUNCTION(BlueprintPure)
-	virtual bool CanBeUtilized() const { return CoolsDownOn <= GetWorld()->GetTimeSeconds(); }
+	virtual bool CanBeUtilized() const;
 
 	UFUNCTION(BlueprintPure)
 	float GetCooldown() const { return Cooldown; }
 
 	UFUNCTION(BlueprintPure)
-	float GetRemainingCooldown() const { return FMath::Clamp(CoolsDownOn - GetWorld()->GetTimeSeconds(), 0.f, Cooldown); }
+	float GetRemainingCooldown() const;
 
 	UFUNCTION(BlueprintPure)
 	USGAbilityDataAsset* GetAbilityDataAsset() const { return AbilityDataAsset; }
@@ -49,5 +51,6 @@ protected:
 	USGAbilityDataAsset* AbilityDataAsset;
 
 private:
+	UPROPERTY(Replicated)
 	float CoolsDownOn;
 };

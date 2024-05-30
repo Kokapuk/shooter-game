@@ -1,9 +1,29 @@
 #include "SGAbilityComponent.h"
 
+#include "GameFramework/GameStateBase.h"
+#include "Net/UnrealNetwork.h"
+
 USGAbilityComponent::USGAbilityComponent()
 {
 	SetIsReplicatedByDefault(true);
 	SetIsReplicated(true);
+}
+
+void USGAbilityComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME_CONDITION(USGAbilityComponent, CoolsDownOn, COND_SkipOwner);
+}
+
+bool USGAbilityComponent::CanBeUtilized() const
+{
+	return CoolsDownOn <= GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
+}
+
+float USGAbilityComponent::GetRemainingCooldown() const
+{
+	return FMath::Clamp(CoolsDownOn - GetWorld()->GetGameState()->GetServerWorldTimeSeconds(), 0.f, Cooldown);
 }
 
 void USGAbilityComponent::Utilize()
@@ -34,12 +54,12 @@ void USGAbilityComponent::CosmeticUtilize()
 
 	if (!OwningPawn->IsLocallyControlled()) return;
 
-	CoolsDownOn = GetWorld()->GetTimeSeconds() + Cooldown;
+	CoolsDownOn = GetWorld()->GetGameState()->GetServerWorldTimeSeconds() + Cooldown;
 }
 
 void USGAbilityComponent::ServerUtilize_Implementation()
 {
 	if (!CanBeUtilized()) return;
 
-	CoolsDownOn = GetWorld()->GetTimeSeconds() + Cooldown;
+	CoolsDownOn = GetWorld()->GetGameState()->GetServerWorldTimeSeconds() + Cooldown;
 }

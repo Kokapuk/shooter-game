@@ -58,7 +58,7 @@ void ASGGameState::AuthSetRoundState(const ERoundState NewRoundState)
 	OnRep_RoundState();
 }
 
-TArray<APlayerState*> ASGGameState::GetTeamPlayers(const ETeam Team) const
+TArray<APlayerState*> ASGGameState::GetPlayersByTeam(const ETeam Team) const
 {
 	switch (Team)
 	{
@@ -69,7 +69,7 @@ TArray<APlayerState*> ASGGameState::GetTeamPlayers(const ETeam Team) const
 	}
 }
 
-TArray<APlayerState*> ASGGameState::GetAllPlayers() const
+TArray<APlayerState*> ASGGameState::GetPlayers() const
 {
 	TArray<APlayerState*> AllPlayers = {};
 
@@ -122,7 +122,7 @@ int32 ASGGameState::GetTeamSlotsNumber(const ETeam Team) const
 
 void ASGGameState::AuthRegisterPlayerInTeam(APlayerState* Player, const ETeam Team)
 {
-	if (!HasAuthority() || GetTeamSlotsNumber(Team) == GetTeamPlayers(Team).Num())
+	if (!HasAuthority() || GetTeamSlotsNumber(Team) == GetPlayersByTeam(Team).Num())
 	{
 		return;
 	}
@@ -210,7 +210,7 @@ void ASGGameState::AuthHandleMatchBegin()
 {
 	if (!HasAuthority()) return;
 
-	TArray<APlayerState*> AllPlayers = GetAllPlayers();
+	TArray<APlayerState*> AllPlayers = GetPlayers();
 
 	for (int32 i = 0; i < AllPlayers.Num(); ++i)
 	{

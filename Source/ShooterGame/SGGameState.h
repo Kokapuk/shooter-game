@@ -85,10 +85,10 @@ public:
 	void MultiHandleKill(APlayerState* Killer, APlayerState* Victim);
 
 	UFUNCTION(BlueprintPure)
-	TArray<APlayerState*> GetTeamPlayers(const ETeam Team) const;
+	TArray<APlayerState*> GetPlayersByTeam(const ETeam Team) const;
 
 	UFUNCTION(BlueprintPure)
-	TArray<APlayerState*> GetAllPlayers() const;
+	TArray<APlayerState*> GetPlayers() const;
 
 	UFUNCTION(BlueprintPure)
 	ETeam GetPlayerTeam(const APlayerState* Player) const;
