@@ -61,7 +61,7 @@ void ASGSpectatorPawn::ShowWidgets()
 	if (!IsValid(HUDWidget))
 	{
 		check(IsValid(HUDWidgetClass))
-		
+
 		HUDWidget = CreateWidget(GetWorld(), HUDWidgetClass);
 	}
 
@@ -106,8 +106,12 @@ void ASGSpectatorPawn::ToggleSpectatingMode()
 	APlayerController* PlayerController = GetController<APlayerController>();
 	check(IsValid(PlayerController))
 
-	if (IsValid(TargetCharacter))
+	if (SpectatingMode == ESpectatingMode::Observing)
 	{
+		check(IsValid(TargetCharacter))
+
+		SpectatingMode = ESpectatingMode::Free;
+		
 		HideWidgets();
 		UnsubscribeFromDeathEvent();
 		SetActorLocation(TargetCharacter->GetCamera()->GetComponentLocation());
@@ -117,8 +121,10 @@ void ASGSpectatorPawn::ToggleSpectatingMode()
 		DetailedMovementComponent->MaxSpeed = SavedMaxSpeed;
 		PlayerController->SetViewTarget(this);
 	}
-	else if (GetAliveCharacters().Num() > 0)
+	else if (SpectatingMode == ESpectatingMode::Free && GetAliveCharacters().Num() > 0)
 	{
+		SpectatingMode = ESpectatingMode::Observing;
+		
 		DetailedMovementComponent->MaxSpeed = 0.f;
 		SpectateNext();
 	}
@@ -140,6 +146,11 @@ TArray<ASGCharacter*> ASGSpectatorPawn::GetAliveCharacters() const
 
 void ASGSpectatorPawn::SpectateNext()
 {
+	if (SpectatingMode == ESpectatingMode::Free)
+	{
+		return;
+	}
+
 	const TArray<ASGCharacter*> AliveCharacters = GetAliveCharacters();
 
 	if (AliveCharacters.Num() == 0)

@@ -25,6 +25,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	float GetBlindnessScale() const { return BlindnessScale; }
 
+	UFUNCTION(NetMulticast, Reliable, DisplayName="Reset")
+	void MultiReset();
+
 protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> BlindnessWidgetClass;
@@ -39,10 +42,10 @@ private:
 	float BlindnessScale;
 
 	UFUNCTION(BlueprintCosmetic, DisplayName="HandleOwningPlayerDie")
-	void CosmeticHandleMatchBegin();
+	void HandleMatchBegin();
 
 	UFUNCTION(BlueprintCosmetic, DisplayName="HandleOwningPlayerDie")
-	void CosmeticHandleOwningPlayerDie();
+	void HandleOwningCharacterDie();
 
 	UFUNCTION()
 	void HandleBlindnessProgress(const float Scale) { BlindnessScale = Scale; }

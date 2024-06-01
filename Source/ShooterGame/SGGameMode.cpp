@@ -14,7 +14,7 @@ ASGGameMode::ASGGameMode()
 {
 	bDelayedStart = true;
 	bIsFriendlyFireAllowed = false;
-	RoundsToWin = 1;
+	RoundsToWin = 10;
 }
 
 void ASGGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -38,7 +38,7 @@ UClass* ASGGameMode::GetDefaultPawnClassForController_Implementation(AController
 	{
 		return SpectatorClass;
 	}
-	
+
 	return DefaultPawnClass;
 }
 
@@ -64,6 +64,14 @@ AActor* ASGGameMode::FindPlayerStart_Implementation(AController* Player, const F
 	}
 
 	return nullptr;
+}
+
+bool ASGGameMode::MustSpectate_Implementation(APlayerController* NewPlayerController) const
+{
+	const ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
+
+	return DetailedGameState->GetShooterMatchState() == EMatchState::InProgress || Super::MustSpectate_Implementation(
+		NewPlayerController);
 }
 
 void ASGGameMode::StartMatch()
@@ -126,7 +134,6 @@ void ASGGameMode::ResetPlayers()
 	const ASGGameState* DetailedGameState = GetGameState<ASGGameState>();
 	check(IsValid(DetailedGameState))
 
-
 	TArray<APlayerState*> Players = DetailedGameState->GetPlayers();
 
 	for (int32 i = 0; i < Players.Num(); ++i)
@@ -150,7 +157,7 @@ void ASGGameMode::ResetPlayers()
 
 			SpectatorPawn->ClientHideWidgets();
 			SpectatorPawn->Destroy();
-			
+
 			Controller->Possess(Character);
 			PlayerState->SetIsSpectator(false);
 		}

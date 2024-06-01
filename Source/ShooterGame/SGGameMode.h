@@ -17,6 +17,7 @@ public:
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	virtual AActor* FindPlayerStart_Implementation(AController* Player, const FString& IncomingName) override;
+	virtual bool MustSpectate_Implementation(APlayerController* NewPlayerController) const override;
 	virtual void StartMatch() override;
 	virtual void EndMatch() override;
 	virtual void Logout(AController* Exiting) override;

@@ -11,6 +11,13 @@ class UCameraComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTargetSelect, ASGCharacter*, TargetCharacter);
 
+UENUM(BlueprintType)
+enum class ESpectatingMode : uint8
+{
+	Free,
+	Observing
+};
+
 UCLASS()
 class SHOOTERGAME_API ASGSpectatorPawn : public ASpectatorPawn
 {
@@ -40,6 +47,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> BlindnessWidgetClass;
+
+	ESpectatingMode SpectatingMode;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 

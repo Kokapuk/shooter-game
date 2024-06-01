@@ -30,10 +30,14 @@ class ASGCharacter : public ACharacter
 public:
 	ASGCharacter(const FObjectInitializer& ObjectInitializer);
 
+	UPROPERTY(BlueprintAssignable)
+	FOnCharacterDie OnDie;
+
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void PossessedBy(AController* NewController) override;
 	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	                              AActor* DamageCauser) const override;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
@@ -144,8 +148,11 @@ protected:
 	void UtilizeAbility();
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Die")
-	void AuthDie(AActor* Killer);
+	void AuthDie(AActor* Killer, const bool bIsHeadshot);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiDie();
+	
 	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, DisplayName="Reset Animations")
 	void MultiResetAnimations();
 
@@ -154,13 +161,13 @@ protected:
 
 private:
 	float TargetCameraHeight;
-	
-	UFUNCTION()
-	void HandleMatchBegin();
 
-	UFUNCTION()
-	void UpdateMeshesColor();
+	UPROPERTY(ReplicatedUsing=OnRep_Team)
+	ETeam Team;
 
 	UFUNCTION()
 	void OnRep_IsDead();
+
+	UFUNCTION()
+	void OnRep_Team();
 };

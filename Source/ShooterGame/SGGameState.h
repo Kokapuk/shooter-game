@@ -37,7 +37,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundBegin);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundFinish);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnKill, APlayerState*, Killer, APlayerState*, Victim); 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnKill, APlayerState*, Killer, APlayerState*, Victim, bool, bIsHeadshot); 
 
 UCLASS()
 class SHOOTERGAME_API ASGGameState : public AGameState
@@ -82,7 +82,7 @@ public:
 	void AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETeam Team);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MultiHandleKill(APlayerState* Killer, APlayerState* Victim);
+	void MultiHandleKill(APlayerState* Killer, APlayerState* Victim, bool bIsHeadshot);
 
 	UFUNCTION(BlueprintPure)
 	TArray<APlayerState*> GetPlayersByTeam(const ETeam Team) const;

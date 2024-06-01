@@ -105,6 +105,15 @@ void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
 	TimeToFire = Equipped->TimeBetweenShots;
 	Rounds--;
 
+	if (!Rounds)
+	{
+		const float FireAnimationLength = GetEquipped()->WeaponFireMontage->GetPlayLength();
+
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, this, &USGWeaponComponent::ServerReload_Implementation,
+		                                       FireAnimationLength);
+	}
+
 	MultiFire(HitResult);
 
 	if (!HitResult.bBlockingHit) return;
@@ -155,7 +164,10 @@ void USGWeaponComponent::AuthReset()
 
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 {
-	if (!IsLocallyControlled()) PlayFireAnimations();
+	if (!IsLocallyControlled())
+	{
+		PlayFireAnimations();
+	}
 
 	if (USGGameUserSettings::GetSGGameUserSettings()->bShowTracers)
 	{
@@ -164,11 +176,12 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 
 	PlayImpactEffects(HitResult);
 
-	if (!IsLocallyControlled()) return;
 	const AActor* HitActor = HitResult.GetActor();
 
-	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
-	CosmeticPlayHitMarker();
+	if (IsValid(HitActor) && HitActor->CanBeDamaged() && IsOwnerLocalViewTarget())
+	{
+		PlayHitMarker();
+	}
 }
 
 void USGWeaponComponent::ServerReload_Implementation()
@@ -310,9 +323,8 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 	                                         HitResult.Normal.Rotation());
 }
 
-void USGWeaponComponent::CosmeticPlayHitMarker()
+void USGWeaponComponent::PlayHitMarker()
 {
-	if (!IsLocallyControlled()) return;
 	check(IsValid(HitMarker));
 
 	UGameplayStatics::PlaySound2D(this, HitMarker);

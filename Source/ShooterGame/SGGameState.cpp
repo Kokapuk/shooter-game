@@ -171,9 +171,9 @@ void ASGGameState::AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETea
 	}
 }
 
-void ASGGameState::MultiHandleKill_Implementation(APlayerState* Killer, APlayerState* Victim)
+void ASGGameState::MultiHandleKill_Implementation(APlayerState* Killer, APlayerState* Victim, bool bIsHeadshot)
 {
-	OnKill.Broadcast(Killer, Victim);
+	OnKill.Broadcast(Killer, Victim, bIsHeadshot);
 }
 
 void ASGGameState::OnRep_ShooterMatchState()

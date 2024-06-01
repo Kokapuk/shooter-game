@@ -85,7 +85,7 @@ protected:
 	void PlayImpactEffects(const FHitResult& HitResult) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Play Hit Marker")
-	void CosmeticPlayHitMarker();
+	void PlayHitMarker();
 
 private:
 	FTimerHandle ReloadingHandle;

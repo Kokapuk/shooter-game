@@ -20,7 +20,7 @@ void USGBlindnessComponent::BeginPlay()
 	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
 	check(IsValid(GameState))
 
-	GameState->OnMatchBegin.AddUniqueDynamic(this, &USGBlindnessComponent::CosmeticHandleMatchBegin);
+	GameState->OnMatchBegin.AddUniqueDynamic(this, &USGBlindnessComponent::HandleMatchBegin);
 }
 
 void USGBlindnessComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -29,6 +29,12 @@ void USGBlindnessComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	BlindnessTimeline.TickTimeline(DeltaTime);
+}
+
+void USGBlindnessComponent::MultiReset_Implementation()
+{
+	BlindnessTimeline.Stop();
+	BlindnessScale = 0.f;
 }
 
 void USGBlindnessComponent::MultiBlind_Implementation(UCurveFloat* NewBlindnessCurve)
@@ -53,23 +59,21 @@ void USGBlindnessComponent::MultiBlind_Implementation(UCurveFloat* NewBlindnessC
 	BlindnessTimeline.PlayFromStart();
 }
 
-void USGBlindnessComponent::CosmeticHandleMatchBegin()
+void USGBlindnessComponent::HandleMatchBegin()
 {
-	const APawn* OwningPawn = Cast<APawn>(GetOwner());
-	check(IsValid(OwningPawn))
+	ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
+	check(IsValid(OwningCharacter))
 
-	if (!OwningPawn->IsLocallyControlled()) return;
+	if (OwningCharacter->IsLocallyControlled())
+	{
+		UUserWidget* BlindnessWidget = CreateWidget(GetWorld(), BlindnessWidgetClass);
+		BlindnessWidget->AddToViewport();
+	}
 
-	UUserWidget* BlindnessWidget = CreateWidget(GetWorld(), BlindnessWidgetClass);
-	BlindnessWidget->AddToViewport();
-
-	ASGPlayerState* PlayerState = OwningPawn->GetPlayerState<ASGPlayerState>();
-	check(IsValid(PlayerState))
-
-	PlayerState->OnDie.AddUniqueDynamic(this, &USGBlindnessComponent::CosmeticHandleOwningPlayerDie);
+	OwningCharacter->OnDie.AddUniqueDynamic(this, &USGBlindnessComponent::HandleOwningCharacterDie);
 }
 
-void USGBlindnessComponent::CosmeticHandleOwningPlayerDie()
+void USGBlindnessComponent::HandleOwningCharacterDie()
 {
 	BlindnessTimeline.Stop();
 	BlindnessScale = 0.f;

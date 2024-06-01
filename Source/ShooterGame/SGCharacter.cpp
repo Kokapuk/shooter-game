@@ -81,9 +81,10 @@ void ASGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ASGCharacter, AbilityComponent)
+	DOREPLIFETIME(ASGCharacter, AbilityComponent);
 	DOREPLIFETIME(ASGCharacter, Health);
 	DOREPLIFETIME(ASGCharacter, bIsDead);
+	DOREPLIFETIME(ASGCharacter, Team);
 }
 
 void ASGCharacter::BeginPlay()
@@ -91,11 +92,6 @@ void ASGCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	Health = MaxHealth;
-
-	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
-	check(IsValid(GameState))
-
-	GameState->OnMatchBegin.AddUniqueDynamic(this, &ASGCharacter::HandleMatchBegin);
 }
 
 void ASGCharacter::Tick(float DeltaSeconds)
@@ -106,6 +102,17 @@ void ASGCharacter::Tick(float DeltaSeconds)
 	                                                                FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,
 	                                                                10.f);
 	Camera->SetRelativeLocation(NewCameraLocation);
+}
+
+void ASGCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	const ASGPlayerState* DetailedPlayerState = NewController->GetPlayerState<ASGPlayerState>();
+	check(IsValid(DetailedPlayerState))
+
+	Team = DetailedPlayerState->GetTeam();
+	OnRep_Team();
 }
 
 bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
@@ -132,10 +139,10 @@ float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	if (!ShouldTakeDamage(ActualDamage, DamageEvent, EventInstigator, DamageCauser)) return 0.f;
 
 	Health -= ActualDamage;
-	
+
 	if (Health == 0.f)
 	{
-		AuthDie(DamageCauser);
+		AuthDie(DamageCauser, DamageAmount == 100.f);
 	}
 
 	return ActualDamage;
@@ -173,13 +180,7 @@ void ASGCharacter::ServerSetAbility_Implementation(const USGAbilityDataAsset* Ne
 
 ETeam ASGCharacter::GetTeam() const
 {
-	const ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
-	check(IsValid(GameState))
-
-	const ASGPlayerState* Player = GetPlayerState<ASGPlayerState>();
-	if (!IsValid(Player)) return ETeam::None;
-
-	return Player->GetTeam();
+	return Team;
 }
 
 void ASGCharacter::AuthReset(const AActor* PlayerStart)
@@ -204,6 +205,9 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	check(IsValid(DetailedCharacterMovement))
 
 	DetailedCharacterMovement->AuthReset();
+
+	check(IsValid(BlindnessComponent))
+	BlindnessComponent->MultiReset();
 }
 
 void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
@@ -243,9 +247,18 @@ void ASGCharacter::UtilizeAbility()
 	AbilityComponent->Utilize();
 }
 
-void ASGCharacter::AuthDie(AActor* Killer)
+void ASGCharacter::AuthDie(AActor* Killer, const bool bIsHeadshot)
 {
 	if (!HasAuthority()) return;
+
+	bIsDead = true;
+	OnRep_IsDead();
+
+	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
+	check(IsValid(DetailedPlayerState));
+
+	DetailedPlayerState->MultiHandleDie();
+	MultiDie();
 
 	MultiSetDeadCollision(true);
 	GetMovementComponent()->Velocity = FVector::ZeroVector;
@@ -253,18 +266,12 @@ void ASGCharacter::AuthDie(AActor* Killer)
 	UWorld* World = GetWorld();
 	const AGameModeBase* GameMode = World->GetAuthGameMode<AGameModeBase>();
 
-	ASGPlayerState* DetailedPlayerState = GetPlayerState<ASGPlayerState>();
-	check(IsValid(DetailedPlayerState));
-	
-	ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass, Camera->GetComponentLocation(),
+	ASpectatorPawn* SpectatorPawn = World->SpawnActor<ASpectatorPawn>(GameMode->SpectatorClass,
+	                                                                  Camera->GetComponentLocation(),
 	                                                                  GetActorRotation());
 	GetController()->Possess(SpectatorPawn);
 
 	DetailedPlayerState->SetIsSpectator(true);
-	bIsDead = true;
-	OnRep_IsDead();
-
-	DetailedPlayerState->MultiHandleDie();
 
 	const APawn* KillerPawn = Cast<APawn>(Killer);
 	check(IsValid(KillerPawn))
@@ -277,7 +284,12 @@ void ASGCharacter::AuthDie(AActor* Killer)
 	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
 	check(IsValid(GameState))
 
-	GameState->MultiHandleKill(KillerPlayerState, DetailedPlayerState);
+	GameState->MultiHandleKill(KillerPlayerState, DetailedPlayerState, bIsHeadshot);
+}
+
+void ASGCharacter::MultiDie_Implementation()
+{
+	OnDie.Broadcast();
 }
 
 void ASGCharacter::MultiResetAnimations_Implementation()
@@ -312,19 +324,24 @@ void ASGCharacter::MultiSetDeadCollision_Implementation(const bool bNewDeadColli
 	GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, bNewDeadCollision ? ECR_Ignore : ECR_Block);
 }
 
-void ASGCharacter::HandleMatchBegin()
+void ASGCharacter::OnRep_IsDead()
 {
-	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, this, &ASGCharacter::UpdateMeshesColor, .2f, false);
+	if (!bIsDead) return;
+
+	check(IsValid(DeathMontage))
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	check(IsValid(AnimInstance))
+
+	AnimInstance->Montage_Play(DeathMontage);
 }
 
-void ASGCharacter::UpdateMeshesColor()
+void ASGCharacter::OnRep_Team()
 {
 	check(IsValid(RedTeamMaterial))
 	check(IsValid(BlueTeamMaterial))
 
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
-	const ETeam Team = GetTeam();
 
 	if (Team == ETeam::Red)
 	{
@@ -336,16 +353,4 @@ void ASGCharacter::UpdateMeshesColor()
 		CharacterMesh->SetMaterial(0, BlueTeamMaterial);
 		ArmsMesh->SetMaterial(0, BlueTeamMaterial);
 	}
-}
-
-void ASGCharacter::OnRep_IsDead()
-{
-	if (!bIsDead) return;
-
-	check(IsValid(DeathMontage))
-
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	check(IsValid(AnimInstance))
-
-	AnimInstance->Montage_Play(DeathMontage);
 }
