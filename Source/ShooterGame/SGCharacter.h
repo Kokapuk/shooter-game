@@ -151,13 +151,13 @@ protected:
 	void AuthDie(AActor* Killer, const bool bIsHeadshot);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MultiDie();
+	void MultiReset();
 	
-	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, DisplayName="Reset Animations")
-	void MultiResetAnimations();
+	UFUNCTION(BlueprintCallable)
+	void ResetAnimations() const;
 
-	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
-	void MultiSetDeadCollision(const bool bNewDeadCollision);
+	UFUNCTION(BlueprintCallable)
+	void SetDeadCollision(const bool bNewDeadCollision) const;
 
 private:
 	float TargetCameraHeight;

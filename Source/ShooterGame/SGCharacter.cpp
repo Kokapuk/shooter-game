@@ -191,8 +191,7 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	bIsDead = false;
 
 	SetActorLocation(PlayerStart->GetActorLocation());
-	MultiResetAnimations();
-	MultiSetDeadCollision(false);
+	MultiReset();
 
 	check(IsValid(Weapon))
 	Weapon->AuthReset();
@@ -205,9 +204,6 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	check(IsValid(DetailedCharacterMovement))
 
 	DetailedCharacterMovement->AuthReset();
-
-	check(IsValid(BlindnessComponent))
-	BlindnessComponent->MultiReset();
 }
 
 void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
@@ -258,9 +254,7 @@ void ASGCharacter::AuthDie(AActor* Killer, const bool bIsHeadshot)
 	check(IsValid(DetailedPlayerState));
 
 	DetailedPlayerState->MultiHandleDie();
-	MultiDie();
 
-	MultiSetDeadCollision(true);
 	GetMovementComponent()->Velocity = FVector::ZeroVector;
 
 	UWorld* World = GetWorld();
@@ -287,12 +281,16 @@ void ASGCharacter::AuthDie(AActor* Killer, const bool bIsHeadshot)
 	GameState->MultiHandleKill(KillerPlayerState, DetailedPlayerState, bIsHeadshot);
 }
 
-void ASGCharacter::MultiDie_Implementation()
+void ASGCharacter::MultiReset_Implementation()
 {
-	OnDie.Broadcast();
+	SetDeadCollision(false);
+	ResetAnimations();
+
+	check(IsValid(BlindnessComponent))
+	BlindnessComponent->MultiReset();
 }
 
-void ASGCharacter::MultiResetAnimations_Implementation()
+void ASGCharacter::ResetAnimations() const
 {
 	UAnimInstance* MeshAnimInstance = GetMesh()->GetAnimInstance();
 	check(IsValid(MeshAnimInstance))
@@ -318,7 +316,7 @@ void ASGCharacter::MultiResetAnimations_Implementation()
 	}
 }
 
-void ASGCharacter::MultiSetDeadCollision_Implementation(const bool bNewDeadCollision)
+void ASGCharacter::SetDeadCollision(const bool bNewDeadCollision) const
 {
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, bNewDeadCollision ? ECR_Ignore : ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel1, bNewDeadCollision ? ECR_Ignore : ECR_Block);
@@ -328,10 +326,12 @@ void ASGCharacter::OnRep_IsDead()
 {
 	if (!bIsDead) return;
 
-	check(IsValid(DeathMontage))
+	OnDie.Broadcast();
+	SetDeadCollision(true);
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	check(IsValid(AnimInstance))
+	check(IsValid(DeathMontage))
 
 	AnimInstance->Montage_Play(DeathMontage);
 }
