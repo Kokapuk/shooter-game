@@ -1,11 +1,6 @@
 #include "SGGameState.h"
 
 #include "EngineUtils.h"
-#include "SGGameMode.h"
-#include "SGPlayerStart.h"
-#include "SGPlayerState.h"
-#include "GameFramework/PlayerState.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 void ASGGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -13,167 +8,29 @@ void ASGGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASGGameState, ShooterMatchState);
-	DOREPLIFETIME(ASGGameState, RoundState);
-	DOREPLIFETIME(ASGGameState, RedTeamPlayers);
-	DOREPLIFETIME(ASGGameState, BlueTeamPlayers);
-	DOREPLIFETIME(ASGGameState, Spectators);
-	DOREPLIFETIME(ASGGameState, RedTeamScore);
-	DOREPLIFETIME(ASGGameState, BlueTeamScore);
 }
 
 void ASGGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	for (TActorIterator<ASGPlayerStart> Iterator(GetWorld()); Iterator; ++Iterator)
-	{
-		switch (Iterator->GetTeam())
-		{
-		case ETeam::Red:
-			RedTeamSlotsNumber++;
-			break;
-		case ETeam::Blue:
-			BlueTeamSlotsNumber++;
-			break;
-		}
-	}
-
-	if (!HasAuthority()) return;
-	OnMatchBegin.AddDynamic(this, &ASGGameState::AuthHandleMatchBegin);
+	OnMatchBegin.AddDynamic(this, &ASGGameState::HandleMatchBegin);
 }
 
 void ASGGameState::AuthSetMatchState(const EMatchState NewMatchState)
 {
-	if (!HasAuthority()) return;
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	ShooterMatchState = NewMatchState;
 	OnRep_ShooterMatchState();
 }
 
-void ASGGameState::AuthSetRoundState(const ERoundState NewRoundState)
+FString ASGGameState::GetMatchResult() const
 {
-	if (!HasAuthority()) return;
-
-	RoundState = NewRoundState;
-	OnRep_RoundState();
-}
-
-TArray<APlayerState*> ASGGameState::GetPlayersByTeam(const ETeam Team) const
-{
-	switch (Team)
-	{
-	case ETeam::Red: return RedTeamPlayers;
-	case ETeam::Blue: return BlueTeamPlayers;
-	case ETeam::None: return Spectators;
-	default: return {};
-	}
-}
-
-TArray<APlayerState*> ASGGameState::GetPlayers() const
-{
-	TArray<APlayerState*> AllPlayers = {};
-
-	for (int32 i = 0; i < RedTeamPlayers.Num(); ++i)
-	{
-		AllPlayers.Add(RedTeamPlayers[i]);
-	}
-
-	for (int32 i = 0; i < BlueTeamPlayers.Num(); ++i)
-	{
-		AllPlayers.Add(BlueTeamPlayers[i]);
-	}
-
-	return AllPlayers;
-}
-
-ETeam ASGGameState::GetPlayerTeam(const APlayerState* Player) const
-{
-	if (RedTeamPlayers.Contains(Player)) return ETeam::Red;
-	if (BlueTeamPlayers.Contains(Player)) return ETeam::Blue;
-
-	return ETeam::None;
-}
-
-int32 ASGGameState::GetTeamScore(const ETeam Team) const
-{
-	switch (Team)
-	{
-	case ETeam::Red:
-		return RedTeamScore;
-	case ETeam::Blue:
-		return BlueTeamScore;
-	default:
-		return 0;
-	}
-}
-
-int32 ASGGameState::GetTeamSlotsNumber(const ETeam Team) const
-{
-	switch (Team)
-	{
-	case ETeam::Red:
-		return RedTeamSlotsNumber;
-	case ETeam::Blue:
-		return BlueTeamSlotsNumber;
-	default:
-		return -1;
-	}
-}
-
-void ASGGameState::AuthRegisterPlayerInTeam(APlayerState* Player, const ETeam Team)
-{
-	if (!HasAuthority() || GetTeamSlotsNumber(Team) == GetPlayersByTeam(Team).Num())
-	{
-		return;
-	}
-
-	switch (Team)
-	{
-	case ETeam::Red:
-		BlueTeamPlayers.Contains(Player) && BlueTeamPlayers.Remove(Player);
-		Spectators.Contains(Player) && Spectators.Remove(Player);
-
-		if (RedTeamPlayers.Contains(Player)) return;
-		RedTeamPlayers.Add(Player);
-
-		break;
-	case ETeam::Blue:
-		RedTeamPlayers.Contains(Player) && RedTeamPlayers.Remove(Player);
-		Spectators.Contains(Player) && Spectators.Remove(Player);
-
-		if (BlueTeamPlayers.Contains(Player)) return;
-		BlueTeamPlayers.Add(Player);
-
-		break;
-	case ETeam::None:
-		RedTeamPlayers.Contains(Player) && RedTeamPlayers.Remove(Player);
-		BlueTeamPlayers.Contains(Player) && BlueTeamPlayers.Remove(Player);
-
-		if (Spectators.Contains(Player)) return;
-		Spectators.Add(Player);
-
-		break;
-	}
-}
-
-void ASGGameState::AuthUnregisterPlayerFromTeam(APlayerState* Player, const ETeam Team)
-{
-	if (!HasAuthority()) return;
-
-	switch (Team)
-	{
-	case ETeam::Red:
-		RedTeamPlayers.Remove(Player);
-	case ETeam::Blue:
-		BlueTeamPlayers.Remove(Player);
-	case ETeam::None:
-		Spectators.Remove(Player);
-	}
-}
-
-void ASGGameState::MultiHandleKill_Implementation(APlayerState* Killer, APlayerState* Victim, bool bIsHeadshot)
-{
-	OnKill.Broadcast(Killer, Victim, bIsHeadshot);
+	return "Match has ended";
 }
 
 void ASGGameState::OnRep_ShooterMatchState()
@@ -184,75 +41,18 @@ void ASGGameState::OnRep_ShooterMatchState()
 		OnMatchBegin.Broadcast();
 		break;
 	case EMatchState::Finished:
-		OnMatchFinish.Broadcast(RedTeamScore > BlueTeamScore
-			                        ? ETeam::Red
-			                        : BlueTeamScore > RedTeamScore
-			                        ? ETeam::Blue
-			                        : ETeam::None);
+		OnMatchFinish.Broadcast(GetMatchResult());
+		break;
+	default:
 		break;
 	}
 }
 
-void ASGGameState::OnRep_RoundState()
+void ASGGameState::HandleMatchBegin()
 {
-	switch (RoundState)
-	{
-	case ERoundState::InProgress:
-		OnRoundBegin.Broadcast();
-		break;
-	case ERoundState::Finished:
-		OnRoundFinish.Broadcast();
-		break;
-	}
 }
 
-void ASGGameState::AuthHandleMatchBegin()
+void ASGGameState::HandleKill(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot)
 {
-	if (!HasAuthority()) return;
-
-	TArray<APlayerState*> AllPlayers = GetPlayers();
-
-	for (int32 i = 0; i < AllPlayers.Num(); ++i)
-	{
-		ASGPlayerState* PlayerState = Cast<ASGPlayerState>(AllPlayers[i]);
-		check(PlayerState)
-
-		PlayerState->OnDie.AddUniqueDynamic(this, &ASGGameState::AuthHandlePlayerDie);
-	}
-}
-
-void ASGGameState::AuthHandlePlayerDie()
-{
-	if (!HasAuthority()) return;
-
-	bool bAreAllRedTeamMembersDead = true;
-	bool bAreAllBlueTeamMembersDead = true;
-
-	for (int32 i = 0; i < RedTeamPlayers.Num(); ++i)
-	{
-		const ASGPlayerState* PlayerState = Cast<ASGPlayerState>(RedTeamPlayers[i]);
-		if (PlayerState->IsDead()) continue;
-
-		bAreAllRedTeamMembersDead = false;
-		break;
-	}
-
-	for (int32 i = 0; i < BlueTeamPlayers.Num(); ++i)
-	{
-		const ASGPlayerState* PlayerState = Cast<ASGPlayerState>(BlueTeamPlayers[i]);
-		if (PlayerState->IsDead()) continue;
-
-		bAreAllBlueTeamMembersDead = false;
-		break;
-	}
-
-	if (!bAreAllRedTeamMembersDead && !bAreAllBlueTeamMembersDead) return;
-
-	if (bAreAllRedTeamMembersDead) BlueTeamScore++;
-	else if (bAreAllBlueTeamMembersDead) RedTeamScore++;
-
-	ASGGameMode* GameMode = GetWorld()->GetAuthGameMode<ASGGameMode>();
-	check(IsValid(GameMode))
-
-	GameMode->FinishRound();
+	OnKill.Broadcast(Killer, Victim, bIsHeadshot);
 }

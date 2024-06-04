@@ -1,16 +1,9 @@
 #include "SGPlayerState.h"
 
+#include "SGCharacter.h"
 #include "SGGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
-
-void ASGPlayerState::ServerRegisterPlayerInTeam_Implementation(const ETeam Team)
-{
-	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
-	check(IsValid(GameState))
-
-	GameState->AuthRegisterPlayerInTeam(this, Team);
-}
 
 void ASGPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -26,20 +19,10 @@ void ASGPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!HasAuthority()) return;
-
 	ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
 	check(IsValid(GameState))
 
-	GameState->OnMatchBegin.AddUniqueDynamic(this, &ASGPlayerState::AuthHandleMatchBegin);
-}
-
-ETeam ASGPlayerState::GetTeam() const
-{
-	const ASGGameState* GameState = GetWorld()->GetGameState<ASGGameState>();
-	check(IsValid(GameState))
-
-	return GameState->GetPlayerTeam(this);
+	GameState->OnMatchBegin.AddUniqueDynamic(this, &ASGPlayerState::HandleMatchBegin);
 }
 
 void ASGPlayerState::ServerSetAbility_Implementation(USGAbilityDataAsset* NewAbility)
@@ -47,27 +30,40 @@ void ASGPlayerState::ServerSetAbility_Implementation(USGAbilityDataAsset* NewAbi
 	Ability = NewAbility;
 }
 
-void ASGPlayerState::AuthHandleKill()
+bool ASGPlayerState::IsDead() const
 {
-	if (!HasAuthority()) return;
+	return IsValid(Character) ? Character->IsDead() : false;
+}
+
+void ASGPlayerState::AuthIncrementKills()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	Kills++;
 }
 
-void ASGPlayerState::AuthHandleMatchBegin()
+void ASGPlayerState::HandleMatchBegin()
 {
-	if (!HasAuthority()) return;
-
-	SetIsSpectator(GetTeam() == ETeam::None);
 	Character = GetPawn<ASGCharacter>();
+
+	if (IsValid(Character))
+	{
+		Character->OnDie.AddUniqueDynamic(this, &ASGPlayerState::HandleDie);
+	}
 }
 
-void ASGPlayerState::MultiHandleDie_Implementation()
+void ASGPlayerState::HandleDie(ASGPlayerState* Killer, ASGPlayerState* Victim, const bool bIsHeadshot)
 {
-	OnDie.Broadcast();
+	OnDie.Broadcast(Killer, Victim, bIsHeadshot);
 
 	if (HasAuthority())
 	{
+		Killer->AuthIncrementKills();
+
+		SetIsSpectator(true);
 		Deaths++;
 	}
 }

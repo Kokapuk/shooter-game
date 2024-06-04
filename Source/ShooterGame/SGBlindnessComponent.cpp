@@ -1,5 +1,6 @@
 #include "SGBlindnessComponent.h"
 
+#include "SGCharacter.h"
 #include "SGGameState.h"
 #include "SGPlayerState.h"
 #include "Blueprint/UserWidget.h"
@@ -73,7 +74,7 @@ void USGBlindnessComponent::HandleMatchBegin()
 	OwningCharacter->OnDie.AddUniqueDynamic(this, &USGBlindnessComponent::HandleOwningCharacterDie);
 }
 
-void USGBlindnessComponent::HandleOwningCharacterDie()
+void USGBlindnessComponent::HandleOwningCharacterDie(ASGPlayerState*, ASGPlayerState*, bool)
 {
 	BlindnessTimeline.Stop();
 	BlindnessScale = 0.f;

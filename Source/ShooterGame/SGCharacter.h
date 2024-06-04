@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SGGameState.h"
+#include "Delegates.h"
 #include "SGWeaponComponent.h"
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
@@ -18,26 +18,23 @@ class UMotionControllerComponent;
 class UAnimMontage;
 class USoundBase;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCharacterDie);
+DECLARE_DELEGATE_OneParam(FCrouchDelegate, bool);
 
-UCLASS(config=Game)
+UCLASS()
 class ASGCharacter : public ACharacter
 {
 	GENERATED_BODY()
-
-	DECLARE_DELEGATE_OneParam(FCrouchDelegate, bool);
 
 public:
 	ASGCharacter(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(BlueprintAssignable)
-	FOnCharacterDie OnDie;
+	FOnDie OnDie;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	virtual void PossessedBy(AController* NewController) override;
 	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	                              AActor* DamageCauser) const override;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
@@ -65,7 +62,7 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Set Ability")
 	void ServerSetAbility(const USGAbilityDataAsset* NewAbility);
-	
+
 	UFUNCTION(BlueprintPure)
 	USGAbilityComponent* GetAbilityComponent() const { return AbilityComponent; }
 
@@ -80,9 +77,6 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	bool IsDead() const { return bIsDead; }
-
-	UFUNCTION(BlueprintPure)
-	ETeam GetTeam() const;
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiPlayHitReactMontage(const FName& HitBoneName);
@@ -127,12 +121,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	UAnimMontage* DeathMontage;
 
-	UPROPERTY(EditDefaultsOnly)
-	UMaterialInstance* RedTeamMaterial;
-
-	UPROPERTY(EditDefaultsOnly)
-	UMaterialInterface* BlueTeamMaterial;
-
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 	void MoveForward(const float Value) { AddMovementInput(GetActorForwardVector(), Value); };
@@ -148,11 +136,14 @@ protected:
 	void UtilizeAbility();
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Die")
-	void AuthDie(AActor* Killer, const bool bIsHeadshot);
+	void AuthDie(APawn* Killer, const bool bIsHeadshot);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiDie(APawn* Killer, const bool bIsHeadshot);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiReset();
-	
+
 	UFUNCTION(BlueprintCallable)
 	void ResetAnimations() const;
 
@@ -162,12 +153,6 @@ protected:
 private:
 	float TargetCameraHeight;
 
-	UPROPERTY(ReplicatedUsing=OnRep_Team)
-	ETeam Team;
-
 	UFUNCTION()
 	void OnRep_IsDead();
-
-	UFUNCTION()
-	void OnRep_Team();
 };

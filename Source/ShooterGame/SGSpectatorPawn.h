@@ -76,5 +76,5 @@ private:
 	UUserWidget* BlindnessWidget;
 
 	UFUNCTION()
-	void HandleViewTargetDie() { ToggleSpectatingMode(); }
+	void HandleViewTargetDie(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot);
 };

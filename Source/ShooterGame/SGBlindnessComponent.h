@@ -1,10 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SGPlayerState.h"
 #include "Components/ActorComponent.h"
 #include "Components/TimelineComponent.h"
 #include "SGBlindnessComponent.generated.h"
 
+class ASGPlayerState;
 struct FTimeline;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -41,11 +43,11 @@ private:
 
 	float BlindnessScale;
 
-	UFUNCTION(BlueprintCosmetic, DisplayName="HandleOwningPlayerDie")
+	UFUNCTION()
 	void HandleMatchBegin();
 
-	UFUNCTION(BlueprintCosmetic, DisplayName="HandleOwningPlayerDie")
-	void HandleOwningCharacterDie();
+	UFUNCTION()
+	void HandleOwningCharacterDie(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot);
 
 	UFUNCTION()
 	void HandleBlindnessProgress(const float Scale) { BlindnessScale = Scale; }

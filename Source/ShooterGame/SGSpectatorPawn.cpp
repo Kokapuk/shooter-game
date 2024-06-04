@@ -204,3 +204,8 @@ void ASGSpectatorPawn::CosmeticUpdateCameraRotation(const float DeltaTime) const
 	                                              TargetCharacter->GetBaseAimRotation(), DeltaTime, 35.f);
 	TargetCamera->SetWorldRotation(NewRotation);
 }
+
+void ASGSpectatorPawn::HandleViewTargetDie(ASGPlayerState*, ASGPlayerState*, bool)
+{
+	ToggleSpectatingMode(); 
+}
