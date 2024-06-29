@@ -18,3 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRoundFinish);
 UDELEGATE()
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDie, ASGPlayerState*, Killer, ASGPlayerState*, Victim, bool,
                                                bIsHeadhshot);
+
+
+UDELEGATE()
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFire);

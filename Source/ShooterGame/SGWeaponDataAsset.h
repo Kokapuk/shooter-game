@@ -5,7 +5,6 @@
 #include "SGWeaponDataAsset.generated.h"
 
 class ASGTracer;
-class USoundCue;
 
 UCLASS()
 class SHOOTERGAME_API USGWeaponDataAsset : public UDataAsset
@@ -13,16 +12,18 @@ class SHOOTERGAME_API USGWeaponDataAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	USGWeaponDataAsset();
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(ClampMin=0.f))
 	float TimeBetweenShots;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(ClampMin=0.f))
 	float MaxShootingError;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(ClampMin=0.f))
 	float ReloadTime;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(ClampMin=1))
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(ClampMin=0))
 	int32 MagazineCapacity;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
@@ -54,13 +55,10 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	UParticleSystem* SurfaceImpactParticles;
-	
+
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	USoundBase* BodyImpactCue;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	UParticleSystem* HeadShotParticles;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	UParticleSystem* BodyShotParticles;
+	UParticleSystem* BodyImpactParticles;
 };

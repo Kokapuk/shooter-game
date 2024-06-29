@@ -1,18 +1,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerStart.h"
 #include "ShooterGame/Enums.h"
+#include "ShooterGame/SGPlayerStart.h"
 #include "SGVersusPlayerStart.generated.h"
 
 UCLASS()
-class SHOOTERGAME_API ASGVersusPlayerStart : public APlayerStart
+class SHOOTERGAME_API ASGVersusPlayerStart : public ASGPlayerStart
 {
 	GENERATED_BODY()
 
 public:
-	ASGVersusPlayerStart(const FObjectInitializer& ObjectInitializer);
-
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	void AuthOccupy(APlayerController* Player);
 	

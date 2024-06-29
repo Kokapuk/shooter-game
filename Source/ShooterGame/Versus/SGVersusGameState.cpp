@@ -172,14 +172,16 @@ FString ASGVersusGameState::GetMatchResult() const
 	return FString::Printf(TEXT("%hs team has won"), RedTeamScore > BlueTeamScore ? "Red" : "Blue");
 }
 
-void ASGVersusGameState::HandleMatchBegin()
+TArray<ASGPlayerState*> ASGVersusGameState::GetKillEventTargets() const
 {
-	Super::HandleMatchBegin();
+	TArray<ASGPlayerState*> Targets;
 
-	for (ASGVersusPlayerState* Player : GetPlayers())
+	for (ASGPlayerState* Target : GetPlayers())
 	{
-		Player->OnDie.AddUniqueDynamic(this, &ASGVersusGameState::HandleKill);
+		Targets.Add(Target);
 	}
+	
+	return Targets;
 }
 
 void ASGVersusGameState::HandleKill(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot)

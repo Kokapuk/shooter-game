@@ -42,24 +42,22 @@ void ASGGameMode::EndMatch()
 	DetailedGameState->AuthSetMatchState(EMatchState::Finished);
 }
 
-void ASGGameMode::ShufflePlayerStarts(TArray<AActor*>& PlayerStarts)
+void ASGGameMode::ShuffleActors(TArray<AActor*>& Actors)
 {
-	const int32 NumShuffles = PlayerStarts.Num() - 1;
-
-	for (int32 i = 0; i < NumShuffles; ++i)
+	for (int32 i = 0; i < Actors.Num() - 1; ++i)
 	{
-		const int32 SwapIndex = FMath::RandRange(i, NumShuffles);
-		PlayerStarts.Swap(i, SwapIndex);
+		const int32 SwapIndex = FMath::RandRange(0, Actors.Num() - 1);
+		Actors.Swap(i, SwapIndex);
 	}
 }
 
 void ASGGameMode::ResetPlayer(ASGPlayerState* Player)
 {
-		ASGPlayerController* Controller = Player->GetOwner<ASGPlayerController>();
+	ASGPlayerController* Controller = Player->GetOwner<ASGPlayerController>();
 	check(IsValid(Controller))
 
 	const AActor* PlayerStart = FindPlayerStart(Controller);
-	
+
 	if (!IsValid(PlayerStart))
 	{
 		return;

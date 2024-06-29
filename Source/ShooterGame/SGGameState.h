@@ -24,7 +24,6 @@ public:
 	FOnDie OnKill;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Set Match State")
 	void AuthSetMatchState(const EMatchState NewMatchState);
@@ -41,6 +40,8 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ShooterMatchState();
+
+	virtual TArray<ASGPlayerState*> GetKillEventTargets() const;
 
 	UFUNCTION()
 	virtual void HandleMatchBegin();

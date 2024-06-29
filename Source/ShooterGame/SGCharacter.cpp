@@ -198,8 +198,8 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction<FCrouchDelegate>("Crouch", IE_Pressed, this, &ACharacter::Crouch, false);
 	PlayerInputComponent->BindAction<FCrouchDelegate>("Crouch", IE_Released, this, &ACharacter::UnCrouch, false);
 
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::Fire);
-	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::Reload);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASGCharacter::FireWeapon);
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::ReloadWeapon);
 
 	PlayerInputComponent->BindAction("UtilizeAbility", IE_Pressed, this, &ASGCharacter::UtilizeAbility);
 }

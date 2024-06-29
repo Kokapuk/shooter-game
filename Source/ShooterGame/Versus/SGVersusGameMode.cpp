@@ -45,7 +45,7 @@ AActor* ASGVersusGameMode::FindPlayerStart_Implementation(AController* Player, c
 
 	TArray<AActor*> PlayerStarts;
 	UGameplayStatics::GetAllActorsOfClass(this, ASGVersusPlayerStart::StaticClass(), PlayerStarts);
-	ShufflePlayerStarts(PlayerStarts);
+	ShuffleActors(PlayerStarts);
 
 	for (int32 i = 0; i < PlayerStarts.Num(); ++i)
 	{

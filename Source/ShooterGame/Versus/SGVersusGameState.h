@@ -71,7 +71,7 @@ protected:
 	int32 BlueTeamScore;
 
 	virtual FString GetMatchResult() const override;
-	virtual void HandleMatchBegin() override;
+	virtual TArray<ASGPlayerState*> GetKillEventTargets() const override;
 	virtual void HandleKill(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot) override;
 
 	UFUNCTION()

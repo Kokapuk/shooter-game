@@ -15,6 +15,11 @@ void ASGVersusCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
+	if (Team != ETeam::None)
+	{
+		return;
+	}
+
 	const ASGVersusPlayerState* DetailedPlayerState = NewController->GetPlayerState<ASGVersusPlayerState>();
 	check(IsValid(DetailedPlayerState))
 
@@ -23,7 +28,7 @@ void ASGVersusCharacter::PossessedBy(AController* NewController)
 }
 
 bool ASGVersusCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser) const
+                                          AActor* DamageCauser) const
 {
 	const ASGVersusGameMode* GameMode = GetWorld()->GetAuthGameMode<ASGVersusGameMode>();
 	check(IsValid(GameMode))
@@ -35,7 +40,7 @@ bool ASGVersusCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& Dama
 	{
 		return false;
 	}
-	
+
 	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 

@@ -57,6 +57,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	USGWeaponComponent* GetWeaponComponent() const { return Weapon; }
 
+	template <class T>
+	T* GetWeaponComponent() const { return Cast<T>(Weapon); }
+
 	UFUNCTION(BlueprintPure)
 	USGBlindnessComponent* GetBlindnessComponent() const { return BlindnessComponent; }
 
@@ -127,10 +130,10 @@ protected:
 	void MoveRight(const float Value) { AddMovementInput(GetActorRightVector(), Value); };
 
 	UFUNCTION(BlueprintCallable)
-	void Fire() { Weapon->CosmeticFire(); }
+	void FireWeapon() { Weapon->CosmeticFire(); }
 
 	UFUNCTION(BlueprintCallable)
-	void Reload() { Weapon->ServerReload(); }
+	void ReloadWeapon() { Weapon->CosmeticReload(); }
 
 	UFUNCTION(BlueprintCallable)
 	void UtilizeAbility();

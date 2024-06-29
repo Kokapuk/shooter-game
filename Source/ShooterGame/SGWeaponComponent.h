@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Delegates.h"
 #include "SGWeaponDataAsset.h"
 #include "Components/ActorComponent.h"
 #include "SGWeaponComponent.generated.h"
@@ -15,6 +16,8 @@ class SHOOTERGAME_API USGWeaponComponent : public UActorComponent
 
 public:
 	USGWeaponComponent();
+
+	FOnFire OnFire;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -38,14 +41,11 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetRounds() const { return Rounds; }
 
-	UFUNCTION(BlueprintPure)
-	bool CanFire() const;
-
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Fire")
 	void CosmeticFire();
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Reload")
-	void ServerReload();
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Reload")
+	void CosmeticReload();
 
 	UFUNCTION(BlueprintPure)
 	FVector GetFireDirection() const;
@@ -68,11 +68,23 @@ protected:
 	UPROPERTY(Replicated)
 	uint8 bIsReloading : 1;
 
+	UFUNCTION(BlueprintPure)
+	bool CanFire() const;
+
 	UFUNCTION(Server, Unreliable)
 	void ServerFire(const FHitResult& HitResult);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiFire(const FHitResult& HitResult);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="ResetRounds")
+	virtual void AuthResetRounds();
+	
+	UFUNCTION(BlueprintPure)
+	virtual bool CanReload() const;
+
+	UFUNCTION(Server, Unreliable)
+	void ServerReload();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiReload();
@@ -85,7 +97,7 @@ protected:
 	void PlayImpactEffects(const FHitResult& HitResult) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Play Hit Marker")
-	void PlayHitMarker();
+	void PlayHitMarker() const;
 
 private:
 	FTimerHandle ReloadingHandle;

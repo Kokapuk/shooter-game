@@ -19,11 +19,11 @@ public:
 	virtual void EndMatch() override;
 
 protected:
-	static void ShufflePlayerStarts(TArray<AActor*>& PlayerStarts);
+	static void ShuffleActors(TArray<AActor*>& Actors);
 
 	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
 	void ResetPlayer(ASGPlayerState* Player);
 
 	UFUNCTION()
-	void HandlePlayerKill(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot);
+	virtual void HandlePlayerKill(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot);
 };

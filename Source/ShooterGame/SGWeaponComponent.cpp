@@ -62,7 +62,7 @@ void USGWeaponComponent::ServerEquip_Implementation(USGWeaponDataAsset* Weapon)
 
 	Equipped = Weapon;
 	OnRep_Equipped();
-	Rounds = IsValid(Weapon) ? Weapon->MagazineCapacity : 0;
+	AuthResetRounds();
 }
 
 bool USGWeaponComponent::CanFire() const
@@ -71,11 +71,37 @@ bool USGWeaponComponent::CanFire() const
 		bIsReloading;
 }
 
+void USGWeaponComponent::AuthResetRounds()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
+	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
+}
+
+bool USGWeaponComponent::CanReload() const
+{
+	return IsValid(Equipped) && Rounds < Equipped->MagazineCapacity && !bIsReloading;
+}
+
 void USGWeaponComponent::CosmeticFire()
 {
-	if (!IsLocallyControlled()) return;
-	if (!Rounds) return ServerReload();
-	if (!CanFire()) return;
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+	
+	if (!Rounds)
+	{
+		return ServerReload();
+	}
+	
+	if (!CanFire())
+	{
+		return;
+	}
 
 	if (!HasAuthority()) TimeToFire = Equipped->TimeBetweenShots;
 	PlayFireAnimations();
@@ -96,6 +122,16 @@ void USGWeaponComponent::CosmeticFire()
 	                                      FLinearColor::Red, FLinearColor::Green, .5f);
 
 	ServerFire(HitResult);
+}
+
+void USGWeaponComponent::CosmeticReload()
+{
+	if (!IsLocallyControlled() || !CanReload())
+	{
+		return;
+	}
+
+	ServerReload();
 }
 
 void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
@@ -159,7 +195,8 @@ void USGWeaponComponent::AuthReset()
 
 	GetOwner()->GetWorldTimerManager().ClearTimer(ReloadingHandle);
 	bIsReloading = false;
-	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
+	TimeToFire = 0.f;
+	AuthResetRounds();
 }
 
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
@@ -182,11 +219,16 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 	{
 		PlayHitMarker();
 	}
+
+	OnFire.Broadcast();
 }
 
 void USGWeaponComponent::ServerReload_Implementation()
 {
-	if (!IsValid(Equipped) || Rounds == Equipped->MagazineCapacity || bIsReloading) return;
+	if (!CanReload())
+	{
+		return;
+	}
 
 	bIsReloading = true;
 	MultiReload();
@@ -230,9 +272,7 @@ void USGWeaponComponent::AuthFinishReload()
 	if (!HasAuthority()) return;
 
 	bIsReloading = false;
-
-	check(IsValid(Equipped))
-	Rounds = Equipped->MagazineCapacity;
+	AuthResetRounds();
 }
 
 void USGWeaponComponent::PlayFireAnimations() const
@@ -315,15 +355,18 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 
 	if (HitActor->CanBeDamaged())
 	{
-		ImpactParticles = HitResult.BoneName == "head" ? Equipped->HeadShotParticles : Equipped->BodyShotParticles;
+		ImpactParticles = Equipped->BodyImpactParticles;
 	}
-	else ImpactParticles = Equipped->SurfaceImpactParticles;
+	else
+	{
+		ImpactParticles = Equipped->SurfaceImpactParticles;
+	}
 
 	UGameplayStatics::SpawnEmitterAtLocation(OwningCharacter, ImpactParticles, HitResult.Location,
 	                                         HitResult.Normal.Rotation());
 }
 
-void USGWeaponComponent::PlayHitMarker()
+void USGWeaponComponent::PlayHitMarker() const
 {
 	check(IsValid(HitMarker));
 
