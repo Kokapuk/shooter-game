@@ -2,11 +2,12 @@
 
 #include "SGGameUserSettings.h"
 
-void USGAnimNotify_PlayParticleEffect::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+void USGAnimNotify_PlayParticleEffect::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+                                              const FAnimNotifyEventReference& EventReference)
 {
 #if !WITH_EDITOR
 	if (!USGGameUserSettings::GetSGGameUserSettings()->bShowParticles) return;
 #endif
 
-	Super::Notify(MeshComp, Animation);
+	Super::Notify(MeshComp, Animation, EventReference);
 }

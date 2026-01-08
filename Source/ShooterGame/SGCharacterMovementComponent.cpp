@@ -3,7 +3,6 @@
 #include "SGCharacter.h"
 #include "SGDashAbilityComponent.h"
 #include "GameFramework/Character.h"
-#include "Net/UnrealNetwork.h"
 
 USGCharacterMovementComponent::USGCharacterMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(
 	ObjectInitializer)
@@ -13,7 +12,7 @@ USGCharacterMovementComponent::USGCharacterMovementComponent(const FObjectInitia
 	MaxWalkSpeed = 540.f;
 	MaxWalkSpeedCrouched = 240.f;
 	AirControl = 1.f;
-	CrouchedHalfHeight = 60.f;
+	SetCrouchedHalfHeight(60.f);
 	PerchRadiusThreshold = 10.f;
 
 	bWantsToDash = false;
