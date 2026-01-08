@@ -17,8 +17,12 @@ public:
 	UFUNCTION(Client, Unreliable)
 	void ClientResetControlRotation(const FRotator& NewRotation);
 
-	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Update Mouse Sensitivity")
-	void CosmeticUpdateMouseSensitivity();
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, BlueprintImplementableEvent, DisplayName="Load Settings")
+	void CosmeticLoadSettings();
+
+protected:
+	UFUNCTION(BlueprintCallable)
+	void SetMouseSensitivity(float Value);
 
 private:
 	float MouseSensitivity;

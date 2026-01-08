@@ -32,7 +32,7 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool IsOwnerLocalViewTarget() const;
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable, DisplayName="Equip")
+	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Equip")
 	void ServerEquip(USGWeaponDataAsset* Weapon);
 
 	UFUNCTION(BlueprintPure)

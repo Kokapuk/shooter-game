@@ -13,6 +13,7 @@ USGWeaponDataAsset::USGWeaponDataAsset()
 	FirstPersonFireMontage = nullptr;
 	WeaponReloadMontage = nullptr;
 	ThirdPersonReloadMontage = nullptr;
+  FirstPersonReloadMontage = nullptr;
 	TracerClass = nullptr;
 	SurfaceImpactCue = nullptr;
 	SurfaceImpactParticles = nullptr;

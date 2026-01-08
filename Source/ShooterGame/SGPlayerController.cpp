@@ -1,23 +1,20 @@
 #include "SGPlayerController.h"
 
 #include "SGGameUserSettings.h"
+#include <Kismet/GameplayStatics.h>
 
 void ASGPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (IsLocalPlayerController()) CosmeticUpdateMouseSensitivity();
-}
-
-void ASGPlayerController::CosmeticUpdateMouseSensitivity()
-{
-	USGGameUserSettings* GameUserSettings = USGGameUserSettings::GetSGGameUserSettings();
-	GameUserSettings->LoadSettings();
-	
-	MouseSensitivity = GameUserSettings->MouseSensitivity;
+	if (IsLocalPlayerController()) CosmeticLoadSettings();
 }
 
 void ASGPlayerController::ClientResetControlRotation_Implementation(const FRotator& NewRotation)
 {
 	SetControlRotation(NewRotation);
+}
+
+void ASGPlayerController::SetMouseSensitivity(float Value) {
+	MouseSensitivity = Value;
 }

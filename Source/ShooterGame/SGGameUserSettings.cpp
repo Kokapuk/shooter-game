@@ -6,4 +6,5 @@ USGGameUserSettings::USGGameUserSettings()
 	Volume = .5f;
 	bShowParticles = true;
 	bShowTracers = true;
+  bStatFPS = true;
 }

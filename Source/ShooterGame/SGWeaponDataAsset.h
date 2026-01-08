@@ -47,6 +47,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	UAnimMontage* ThirdPersonReloadMontage;
 
+  UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UAnimMontage* FirstPersonReloadMontage;
+
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	TSubclassOf<ASGTracer> TracerClass;
 

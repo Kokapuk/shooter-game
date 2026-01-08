@@ -10,7 +10,7 @@ void ASGPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASGPlayerState, Character);
-	DOREPLIFETIME_CONDITION(ASGPlayerState, Ability, COND_OwnerOnly);
+	DOREPLIFETIME(ASGPlayerState, Ability);
 	DOREPLIFETIME(ASGPlayerState, Kills);
 	DOREPLIFETIME(ASGPlayerState, Deaths);
 }

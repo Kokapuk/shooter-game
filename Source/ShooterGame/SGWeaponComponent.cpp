@@ -9,6 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/DamageEvents.h"
 
 USGWeaponComponent::USGWeaponComponent()
 {
@@ -248,10 +249,14 @@ void USGWeaponComponent::MultiReload_Implementation()
 	if (IsOwnerLocalViewTarget())
 	{
 		UAnimInstance* WeaponAnimInstance = OwningCharacter->GetFirstPersonWeaponMesh()->GetAnimInstance();
+		UAnimInstance* ArmsAnimInstance = OwningCharacter->GetArmsMesh()->GetAnimInstance();
 		check(IsValid(WeaponAnimInstance))
+		check(IsValid(ArmsAnimInstance))
 
 		WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
 		                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
+		ArmsAnimInstance->Montage_Play(Equipped->FirstPersonReloadMontage,
+		                                 Equipped->FirstPersonReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 	}
 	else
 	{
