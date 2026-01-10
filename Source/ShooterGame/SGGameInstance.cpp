@@ -13,13 +13,14 @@ void USGGameInstance::Init()
 	InviteAcceptedHandle =
 		SessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(
 			FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &USGGameInstance::OnSessionInviteAccepted));
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "INIT");
 }
 
 void USGGameInstance::LockSession()
 {
-	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
+	const UWorld* World = GetWorld();
+	if (World->IsPlayInEditor()) return;
+
+	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(World);
 	check(SessionInterface.IsValid())
 
 	FOnlineSessionSettings* Settings = SessionInterface->GetSessionSettings(NAME_GameSession);
@@ -37,18 +38,12 @@ void USGGameInstance::OnSessionInviteAccepted(bool bWasSuccessful, int32 Control
                                               TSharedPtr<const FUniqueNetId> UserId,
                                               const FOnlineSessionSearchResult& InviteResult)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
-	                                 FString::Printf(
-		                                 TEXT("OnSessionInviteAccepted bWasSuccessful:%d InviteResult.IsValid():%d"),
-		                                 bWasSuccessful,
-		                                 InviteResult.IsValid()));
-
 	if (!bWasSuccessful || !InviteResult.IsValid()) return;
 
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	check(SessionInterface.IsValid())
 
-	SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
+	JoinSessionCompleteHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
 		FOnJoinSessionCompleteDelegate::CreateUObject(this, &USGGameInstance::OnJoinSessionComplete));
 	SessionInterface->JoinSession(ControllerId, NAME_GameSession, InviteResult);
 }
@@ -60,23 +55,10 @@ void USGGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCom
 
 	SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteHandle);
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
-	                                 FString::Printf(
-		                                 TEXT(
-			                                 "OnJoinSessionComplete Result == EOnJoinSessionCompleteResult::Success:%d"),
-		                                 Result == EOnJoinSessionCompleteResult::Success));
-
 	if (Result != EOnJoinSessionCompleteResult::Success) return;
 
 	FString ConnectString;
-	bool bWasSuccessful = SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectString);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
-	                                 FString::Printf(
-		                                 TEXT("OnJoinSessionComplete bWasSuccessful:%d"),
-		                                 bWasSuccessful));
-	if (!bWasSuccessful) return;
-	
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, ConnectString);
+	if (!SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectString)) return;
 
 	APlayerController* PlayerController = GetFirstLocalPlayerController();
 	check(IsValid(PlayerController))

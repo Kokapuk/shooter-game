@@ -34,6 +34,11 @@ void USGCharacterMovementComponent::BeginPlay()
 	SavedMaxAcceleration = MaxAcceleration;
 }
 
+bool USGCharacterMovementComponent::CanAttemptJump() const
+{
+	return IsJumpAllowed() && (IsMovingOnGround() || IsFalling());
+}
+
 FNetworkPredictionData_Client* USGCharacterMovementComponent::GetPredictionData_Client() const
 {
 	check(IsValid(PawnOwner));
@@ -109,7 +114,8 @@ void USGCharacterMovementComponent::PerformDash()
 	ConstantForce->InstanceName = "DashConstantForce";
 	ConstantForce->AccumulateMode = ERootMotionAccumulateMode::Additive;
 	ConstantForce->Priority = 5;
-	ConstantForce->Force = DashAbilityComponent->GetDistance() / DashAbilityComponent->GetDuration() * Velocity.GetSafeNormal();
+	ConstantForce->Force = DashAbilityComponent->GetDistance() / DashAbilityComponent->GetDuration() * Velocity.
+		GetSafeNormal();
 	ConstantForce->Duration = DashAbilityComponent->GetDuration();
 	ConstantForce->StrengthOverTime = DashAbilityComponent->GetCurve();
 	ConstantForce->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::ClampVelocity;

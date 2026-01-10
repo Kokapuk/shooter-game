@@ -10,8 +10,6 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/InputSettings.h"
-#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 
@@ -202,6 +200,11 @@ void ASGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASGCharacter::ReloadWeapon);
 
 	PlayerInputComponent->BindAction("UtilizeAbility", IE_Pressed, this, &ASGCharacter::UtilizeAbility);
+}
+
+bool ASGCharacter::CanJumpInternal_Implementation() const
+{
+	return JumpIsAllowedInternal();
 }
 
 void ASGCharacter::UtilizeAbility()

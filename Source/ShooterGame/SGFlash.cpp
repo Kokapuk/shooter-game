@@ -79,7 +79,7 @@ void ASGFlash::AuthExplode()
 	for (TActorIterator<ASGCharacter> Iterator(GetWorld()); Iterator; ++Iterator)
 	{
 		if (Iterator->IsDead()) continue;
-		
+
 		const UCameraComponent* Camera = Iterator->GetCamera();
 		check(IsValid(Camera))
 
@@ -98,16 +98,17 @@ void ASGFlash::AuthExplode()
 		const FRotator ClampedAimRotation = FRotator(ClampedAimPitch, ClampedAimYaw, 0.f);
 		const FRotator CameraLookAtFlashRotation = UKismetMathLibrary::FindLookAtRotation(
 			Camera->GetComponentLocation(), GetActorLocation());
-		const FRotator Diff = ClampedAimRotation - CameraLookAtFlashRotation;
+		const FRotator LookAtFlashDiff = ClampedAimRotation - CameraLookAtFlashRotation;
 		const float HalfFieldOfView = Camera->FieldOfView / 2.f;
 		constexpr float TargetAspectRatio = 16.f / 9.f;
+		const float LookAtFlashDiffClampedPitch = FMath::Abs(
+			UKismetMathLibrary::ClampAngle(LookAtFlashDiff.Pitch * TargetAspectRatio, -90.f, 90.f));
+		const float LookAtFlashDiffClampedYaw = FMath::Abs(FMath::ClampAngle(LookAtFlashDiff.Yaw, -179.9f, 179.9f));
 
-		if (FMath::Abs(UKismetMathLibrary::ClampAngle(Diff.Pitch * TargetAspectRatio, -90.f, 90.f)) > HalfFieldOfView ||
-			FMath::Abs(FMath::ClampAngle(Diff.Yaw, -179.9f, 179.9f)) > HalfFieldOfView)
+		if (LookAtFlashDiffClampedPitch > HalfFieldOfView || LookAtFlashDiffClampedYaw > HalfFieldOfView)
 		{
 			continue;
 		}
-
 
 		check(IsValid(BlindnessCurve))
 		Iterator->GetBlindnessComponent()->MultiBlind(BlindnessCurve);

@@ -37,6 +37,7 @@ class SHOOTERGAME_API USGCharacterMovementComponent : public UCharacterMovementC
 
 public:
 	virtual void BeginPlay() override;
+	virtual bool CanAttemptJump() const override;
 	virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
 
 	UFUNCTION(BlueprintCallable)

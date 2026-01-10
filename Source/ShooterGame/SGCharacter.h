@@ -125,6 +125,7 @@ protected:
 	UAnimMontage* DeathMontage;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+	virtual bool CanJumpInternal_Implementation() const override;
 
 	void MoveForward(const float Value) { AddMovementInput(GetActorForwardVector(), Value); };
 	void MoveRight(const float Value) { AddMovementInput(GetActorRightVector(), Value); };

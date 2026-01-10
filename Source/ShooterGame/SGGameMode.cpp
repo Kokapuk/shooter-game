@@ -1,6 +1,7 @@
 #include "SGGameMode.h"
 
 #include "SGCharacter.h"
+#include "SGGameInstance.h"
 #include "SGGameState.h"
 #include "SGPlayerController.h"
 #include "SGPlayerState.h"
@@ -30,6 +31,10 @@ void ASGGameMode::StartMatch()
 
 	DetailedGameState->AuthSetMatchState(EMatchState::InProgress);
 	DetailedGameState->OnKill.AddUniqueDynamic(this, &ASGGameMode::HandlePlayerKill);
+
+	USGGameInstance* GameInstance = GetWorld()->GetGameInstance<USGGameInstance>();
+	check(IsValid(GameInstance))
+	GameInstance->LockSession();
 }
 
 void ASGGameMode::EndMatch()
