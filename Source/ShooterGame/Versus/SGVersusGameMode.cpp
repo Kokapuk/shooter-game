@@ -5,6 +5,8 @@
 #include "SGVersusPlayerState.h"
 #include "GameFramework/SpectatorPawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "ShooterGame/SGAbilityDataAsset.h"
+#include "ShooterGame/SGCharacter.h"
 
 ASGVersusGameMode::ASGVersusGameMode()
 {
@@ -19,7 +21,7 @@ void ASGVersusGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 
 	ASGVersusPlayerState* Player = NewPlayer->GetPlayerState<ASGVersusPlayerState>();
 	check(IsValid(Player))
-	
+
 	Player->ServerRegisterPlayerInTeam(ETeam::None);
 }
 
@@ -70,6 +72,19 @@ void ASGVersusGameMode::StartMatch()
 	DetailedGameState->AuthSetRoundState(ERoundState::InProgress);
 }
 
+bool ASGVersusGameMode::ShouldTakeDamage(const ASGCharacter* Damager, const ASGCharacter* Target) const
+{
+	const USGTeamComponent* DamagerTeamComponent = Damager->GetComponentByClass<USGTeamComponent>();
+	const USGTeamComponent* TargetTeamComponent = Target->GetComponentByClass<USGTeamComponent>();
+
+	if (!IsFriendlyFireAllowed() && DamagerTeamComponent->GetTeam() == TargetTeamComponent->GetTeam())
+	{
+		return false;
+	}
+
+	return Super::ShouldTakeDamage(Damager, Target);
+}
+
 void ASGVersusGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
@@ -78,11 +93,6 @@ void ASGVersusGameMode::Logout(AController* Exiting)
 	check(IsValid(Player))
 
 	Player->ServerUnregisterPlayerFromTeam(Player->GetTeam());
-}
-
-bool ASGVersusGameMode::IsFriendlyFireAllowed() const
-{
-	return bIsFriendlyFireAllowed;
 }
 
 void ASGVersusGameMode::FinishRound()
@@ -100,6 +110,31 @@ void ASGVersusGameMode::FinishRound()
 
 	FTimerHandle Handle;
 	GetWorldTimerManager().SetTimer(Handle, this, &ASGVersusGameMode::StartNewRound, PostRoundTime, false);
+}
+
+void ASGVersusGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation)
+{
+	Super::FinishRestartPlayer(NewPlayer, StartRotation);
+
+	ASGVersusPlayerState* PlayerState = NewPlayer->GetPlayerState<ASGVersusPlayerState>();
+
+	if (PlayerState->GetTeam() == ETeam::None) return;
+
+	ASGCharacter* Character = NewPlayer->GetPawn<ASGCharacter>();
+	check(IsValid(Character))
+	check(IsValid(PlayerState))
+
+	USGWeaponComponent* WeaponComponent = Character->GetWeaponComponent();
+	USGAbilityDataAsset* Ability = PlayerState->GetAbility();
+	check(IsValid(WeaponComponent))
+	check(IsValid(Ability))
+
+	USGTeamComponent* TeamComponent = NewObject<USGTeamComponent>(Character, TeamComponentClass);
+	TeamComponent->RegisterComponent();
+
+	WeaponComponent->ServerEquip(DefaultWeapon);
+	Character->ServerSetAbility(Ability);
+	TeamComponent->AuthSetTeam(PlayerState->GetTeam());
 }
 
 void ASGVersusGameMode::ResetPlayers()

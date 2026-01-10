@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ShooterGame/SGPlayerState.h"
+#include "ShooterGame/SGTeamComponent.h"
 #include "SGVersusPlayerState.generated.h"
 
 UCLASS()

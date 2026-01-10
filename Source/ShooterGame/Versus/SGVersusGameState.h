@@ -6,6 +6,14 @@
 
 class ASGVersusPlayerState;
 
+UENUM(BlueprintType)
+enum class ERoundState : uint8
+{
+	None,
+	InProgress,
+	Finished
+};
+
 UCLASS()
 class SHOOTERGAME_API ASGVersusGameState : public ASGGameState
 {
@@ -14,7 +22,7 @@ class SHOOTERGAME_API ASGVersusGameState : public ASGGameState
 public:
 	UPROPERTY(BlueprintAssignable)
 	FOnRoundBegin OnRoundBegin;
-	
+
 	UPROPERTY(BlueprintAssignable)
 	FOnRoundFinish OnRoundFinish;
 
@@ -51,22 +59,22 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly)
 	int32 RedTeamSlotsNumber;
-	
+
 	UPROPERTY(VisibleInstanceOnly)
 	int32 BlueTeamSlotsNumber;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	TArray<ASGVersusPlayerState*> RedTeamPlayers;
-	
+
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	TArray<ASGVersusPlayerState*> BlueTeamPlayers;
-	
+
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	TArray<ASGVersusPlayerState*> Spectators;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	int32 RedTeamScore;
-	
+
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	int32 BlueTeamScore;
 

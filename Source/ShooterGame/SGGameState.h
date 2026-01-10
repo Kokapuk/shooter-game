@@ -2,11 +2,18 @@
 
 #include "CoreMinimal.h"
 #include "Delegates.h"
-#include "Enums.h"
 #include "GameFramework/GameState.h"
 #include "SGGameState.generated.h"
 
 class ASGPlayerState;
+
+UENUM(BlueprintType)
+enum class EMatchState : uint8
+{
+	WaitingToStart,
+	InProgress,
+	Finished
+};
 
 UCLASS()
 class SHOOTERGAME_API ASGGameState : public AGameState

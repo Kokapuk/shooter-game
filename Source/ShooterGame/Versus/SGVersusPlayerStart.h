@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ShooterGame/Enums.h"
 #include "ShooterGame/SGPlayerStart.h"
+#include "ShooterGame/SGTeamComponent.h"
 #include "SGVersusPlayerStart.generated.h"
 
 UCLASS()
@@ -13,7 +13,7 @@ class SHOOTERGAME_API ASGVersusPlayerStart : public ASGPlayerStart
 public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	void AuthOccupy(APlayerController* Player);
-	
+
 	UFUNCTION(BlueprintPure)
 	ETeam GetTeam() const { return Team; }
 

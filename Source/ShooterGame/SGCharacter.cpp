@@ -4,12 +4,14 @@
 #include "SGAbilityDataAsset.h"
 #include "SGBlindnessComponent.h"
 #include "SGCharacterMovementComponent.h"
+#include "SGGameMode.h"
 #include "SGWeaponComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 
@@ -100,7 +102,13 @@ void ASGCharacter::Tick(float DeltaSeconds)
 bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
                                     AActor* DamageCauser) const
 {
-	return Health > 0.f && Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+	const ASGGameMode* GameMode = Cast<ASGGameMode>(UGameplayStatics::GetGameMode(this));
+	const ASGCharacter* DamagerCharacter = Cast<ASGCharacter>(DamageCauser);
+	check(IsValid(GameMode))
+	check(IsValid(DamagerCharacter))
+
+	return Health > 0.f && GameMode->ShouldTakeDamage(DamagerCharacter, this) && Super::ShouldTakeDamage(
+		Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
 float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,

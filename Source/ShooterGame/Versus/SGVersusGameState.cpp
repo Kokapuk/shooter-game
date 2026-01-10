@@ -5,6 +5,7 @@
 #include "SGVersusPlayerStart.h"
 #include "SGVersusPlayerState.h"
 #include "Net/UnrealNetwork.h"
+#include "ShooterGame/SGTeamComponent.h"
 
 void ASGVersusGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -180,7 +181,7 @@ TArray<ASGPlayerState*> ASGVersusGameState::GetKillEventTargets() const
 	{
 		Targets.Add(Target);
 	}
-	
+
 	return Targets;
 }
 

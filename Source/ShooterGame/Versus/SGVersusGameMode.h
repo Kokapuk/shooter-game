@@ -2,7 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "ShooterGame/SGGameMode.h"
+#include "ShooterGame/SGTeamComponent.h"
 #include "SGVersusGameMode.generated.h"
+
+class ASGCharacter;
 
 UCLASS()
 class SHOOTERGAME_API ASGVersusGameMode : public ASGGameMode
@@ -11,15 +14,16 @@ class SHOOTERGAME_API ASGVersusGameMode : public ASGGameMode
 
 public:
 	ASGVersusGameMode();
-	
+
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	virtual AActor* FindPlayerStart_Implementation(AController* Player, const FString& IncomingName) override;
 	virtual void StartMatch() override;
+	virtual bool ShouldTakeDamage(const ASGCharacter* Damager, const ASGCharacter* Target) const override;
 	virtual void Logout(AController* Exiting) override;
 
 	UFUNCTION(BlueprintPure)
-	bool IsFriendlyFireAllowed() const;
+	bool IsFriendlyFireAllowed() const { return bIsFriendlyFireAllowed; };
 
 	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
 	void FinishRound();
@@ -34,9 +38,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=1.f))
 	float PostRoundTime;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<USGTeamComponent> TeamComponentClass;
+
+	virtual void FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation) override;
+
 	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable)
 	void ResetPlayers();
-	
+
 	UFUNCTION()
 	void StartNewRound();
 };

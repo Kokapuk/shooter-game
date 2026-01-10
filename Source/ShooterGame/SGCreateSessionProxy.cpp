@@ -33,6 +33,7 @@ void USGCreateSessionProxy::Activate()
 
 	FOnlineSessionSettings Settings;
 	Settings.bIsLANMatch = false;
+	Settings.bAllowJoinInProgress = true;
 	Settings.bUsesPresence = true;
 	Settings.bAllowInvites = true;
 	Settings.bAllowJoinViaPresence = true;
