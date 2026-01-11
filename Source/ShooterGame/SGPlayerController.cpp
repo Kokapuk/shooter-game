@@ -1,7 +1,10 @@
 #include "SGPlayerController.h"
+#include "SGCheatManager.h"
 
-#include "SGGameUserSettings.h"
-#include <Kismet/GameplayStatics.h>
+ASGPlayerController::ASGPlayerController()
+{
+	CheatClass = USGCheatManager::StaticClass();
+}
 
 void ASGPlayerController::BeginPlay()
 {
@@ -15,6 +18,7 @@ void ASGPlayerController::ClientResetControlRotation_Implementation(const FRotat
 	SetControlRotation(NewRotation);
 }
 
-void ASGPlayerController::SetMouseSensitivity(float Value) {
+void ASGPlayerController::SetMouseSensitivity(float Value)
+{
 	MouseSensitivity = Value;
 }

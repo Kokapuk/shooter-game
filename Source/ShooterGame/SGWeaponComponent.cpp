@@ -9,7 +9,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
-#include "Engine/DamageEvents.h"
 
 USGWeaponComponent::USGWeaponComponent()
 {
@@ -72,41 +71,8 @@ bool USGWeaponComponent::CanFire() const
 		bIsReloading;
 }
 
-void USGWeaponComponent::AuthResetRounds()
+FHitResult USGWeaponComponent::GetHitResult() const
 {
-	if (!HasAuthority())
-	{
-		return;
-	}
-	
-	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
-}
-
-bool USGWeaponComponent::CanReload() const
-{
-	return IsValid(Equipped) && Rounds < Equipped->MagazineCapacity && !bIsReloading;
-}
-
-void USGWeaponComponent::CosmeticFire()
-{
-	if (!IsLocallyControlled())
-	{
-		return;
-	}
-	
-	if (!Rounds)
-	{
-		return ServerReload();
-	}
-	
-	if (!CanFire())
-	{
-		return;
-	}
-
-	if (!HasAuthority()) TimeToFire = Equipped->TimeBetweenShots;
-	PlayFireAnimations();
-
 	const ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
 	check(IsValid(OwningCharacter))
 
@@ -122,6 +88,30 @@ void USGWeaponComponent::CosmeticFire()
 	                                      {}, EDrawDebugTrace::ForDuration, HitResult, true,
 	                                      FLinearColor::Red, FLinearColor::Green, .5f);
 
+	return HitResult;
+}
+
+void USGWeaponComponent::AuthResetRounds()
+{
+	if (!HasAuthority()) return;
+	Rounds = IsValid(Equipped) ? Equipped->MagazineCapacity : 0;
+}
+
+bool USGWeaponComponent::CanReload() const
+{
+	return IsValid(Equipped) && Rounds < Equipped->MagazineCapacity && !bIsReloading;
+}
+
+void USGWeaponComponent::CosmeticFire()
+{
+	if (!IsLocallyControlled()) return;
+	if (!Rounds) return ServerReload();
+	if (!CanFire()) return;
+
+	if (!HasAuthority()) TimeToFire = Equipped->TimeBetweenShots;
+	PlayFireAnimations();
+
+	const FHitResult HitResult = GetHitResult();
 	ServerFire(HitResult);
 }
 
@@ -168,8 +158,10 @@ void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
 	ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
 	check(IsValid(OwningCharacter))
 
-	HitActor->TakeDamage(HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage,
-	                     FDamageEvent(), OwningCharacter->GetController(), OwningCharacter);
+	const float Damage = HitResult.BoneName == "head" ? Equipped->HeadShotDamage : Equipped->BodyShotDamage;
+	const FVector HitFromDirection = (HitResult.ImpactPoint - HitResult.TraceStart).GetSafeNormal();
+	UGameplayStatics::ApplyPointDamage(HitActor, Damage, HitFromDirection, HitResult, OwningCharacter->GetController(),
+	                                   OwningCharacter, UDamageType::StaticClass());
 }
 
 FVector USGWeaponComponent::GetFireDirection() const
@@ -202,10 +194,7 @@ void USGWeaponComponent::AuthReset()
 
 void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 {
-	if (!IsLocallyControlled())
-	{
-		PlayFireAnimations();
-	}
+	if (!IsLocallyControlled()) PlayFireAnimations();
 
 	if (USGGameUserSettings::GetSGGameUserSettings()->bShowTracers)
 	{
@@ -226,10 +215,7 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 
 void USGWeaponComponent::ServerReload_Implementation()
 {
-	if (!CanReload())
-	{
-		return;
-	}
+	if (!CanReload()) return;
 
 	bIsReloading = true;
 	MultiReload();
@@ -256,7 +242,7 @@ void USGWeaponComponent::MultiReload_Implementation()
 		WeaponAnimInstance->Montage_Play(Equipped->WeaponReloadMontage,
 		                                 Equipped->WeaponReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 		ArmsAnimInstance->Montage_Play(Equipped->FirstPersonReloadMontage,
-		                                 Equipped->FirstPersonReloadMontage->GetPlayLength() / Equipped->ReloadTime);
+		                               Equipped->FirstPersonReloadMontage->GetPlayLength() / Equipped->ReloadTime);
 	}
 	else
 	{
@@ -356,7 +342,7 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 		return;
 	}
 
-	UParticleSystem* ImpactParticles = nullptr;
+	UParticleSystem* ImpactParticles;
 
 	if (HitActor->CanBeDamaged())
 	{

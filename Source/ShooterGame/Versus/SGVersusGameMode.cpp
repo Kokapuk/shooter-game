@@ -77,7 +77,8 @@ bool ASGVersusGameMode::ShouldTakeDamage(const ASGCharacter* Damager, const ASGC
 	const USGTeamComponent* DamagerTeamComponent = Damager->GetComponentByClass<USGTeamComponent>();
 	const USGTeamComponent* TargetTeamComponent = Target->GetComponentByClass<USGTeamComponent>();
 
-	if (!IsFriendlyFireAllowed() && DamagerTeamComponent->GetTeam() == TargetTeamComponent->GetTeam())
+	if (Damager != Target && !IsFriendlyFireAllowed() && DamagerTeamComponent->GetTeam() == TargetTeamComponent->
+		GetTeam())
 	{
 		return false;
 	}

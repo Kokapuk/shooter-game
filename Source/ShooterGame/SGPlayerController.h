@@ -10,6 +10,8 @@ class SHOOTERGAME_API ASGPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	ASGPlayerController();
+	
 	virtual void BeginPlay() override;
 	virtual void AddYawInput(float Value) override { Super::AddYawInput(Value * MouseSensitivity); }
 	virtual void AddPitchInput(float Value) override { Super::AddPitchInput(Value * MouseSensitivity); }

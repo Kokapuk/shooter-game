@@ -22,7 +22,7 @@ public:
 	virtual bool ShouldTakeDamage(const ASGCharacter* Damager, const ASGCharacter* Target) const { return true; };
 
 protected:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	USGWeaponDataAsset* DefaultWeapon;
 
 public:

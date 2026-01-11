@@ -5,11 +5,13 @@
 #include "SGBlindnessComponent.h"
 #include "SGCharacterMovementComponent.h"
 #include "SGGameMode.h"
+#include "SGLagCompensationComponent.h"
 #include "SGWeaponComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "Engine/DamageEvents.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -60,6 +62,8 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	Weapon = CreateDefaultSubobject<USGWeaponComponent>("Weapon");
 
 	BlindnessComponent = CreateDefaultSubobject<USGBlindnessComponent>("BlindnessComponent");
+
+	LagCompensationComponent = CreateDefaultSubobject<USGLagCompensationComponent>("LagCompensationComponent");
 }
 
 void ASGCharacter::OnConstruction(const FTransform& Transform)
@@ -119,9 +123,19 @@ float ASGCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	Health -= ActualDamage;
 
+	bool bIsHeadshot = false;
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+		if (PointDamageEvent->HitInfo.BoneName == "head")
+		{
+			bIsHeadshot = true;
+		}
+	}
+
 	if (Health == 0.f)
 	{
-		AuthDie(Cast<APawn>(DamageCauser), DamageAmount == 100.f);
+		AuthDie(Cast<APawn>(DamageCauser), bIsHeadshot);
 	}
 
 	return ActualDamage;

@@ -70,6 +70,9 @@ protected:
 
 	UFUNCTION(BlueprintPure)
 	bool CanFire() const;
+	
+	UFUNCTION(BlueprintPure)
+	FHitResult GetHitResult() const;
 
 	UFUNCTION(Server, Unreliable)
 	void ServerFire(const FHitResult& HitResult);
@@ -77,7 +80,7 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiFire(const FHitResult& HitResult);
 
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="ResetRounds")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Reset Rounds")
 	virtual void AuthResetRounds();
 	
 	UFUNCTION(BlueprintPure)

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "SGCharacter.generated.h"
 
+class USGLagCompensationComponent;
 class USGAbilityDataAsset;
 class USGAbilityComponent;
 class USGBlindnessComponent;
@@ -73,6 +74,9 @@ public:
 	T* GetAbilityComponent() const { return Cast<T>(AbilityComponent); }
 
 	UFUNCTION(BlueprintPure)
+	USGLagCompensationComponent* GetLagCompensationComponent() const { return LagCompensationComponent; };
+
+	UFUNCTION(BlueprintPure)
 	float GetMaxHealth() const { return MaxHealth; }
 
 	UFUNCTION(BlueprintPure)
@@ -108,6 +112,9 @@ protected:
 
 	UPROPERTY(Replicated)
 	USGAbilityComponent* AbilityComponent;
+
+	UPROPERTY(EditDefaultsOnly)
+	USGLagCompensationComponent* LagCompensationComponent;
 
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=1.f))
 	float MaxHealth;
