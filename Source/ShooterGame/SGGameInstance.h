@@ -12,7 +12,10 @@ class SHOOTERGAME_API USGGameInstance : public UGameInstance
 
 public:
 	virtual void Init() override;
-	
+
+	UFUNCTION(BlueprintCallable)
+	void ShowInviteUI() const;
+
 	UFUNCTION(BlueprintCallable)
 	void LockSession();
 

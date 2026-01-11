@@ -15,6 +15,14 @@ void USGGameInstance::Init()
 			FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &USGGameInstance::OnSessionInviteAccepted));
 }
 
+void USGGameInstance::ShowInviteUI() const
+{
+	const IOnlineExternalUIPtr ExternalUI = Online::GetExternalUIInterface(GetWorld());
+	if (!ExternalUI.IsValid()) return;
+
+	ExternalUI->ShowInviteUI(0);
+}
+
 void USGGameInstance::LockSession()
 {
 	const UWorld* World = GetWorld();
