@@ -56,10 +56,13 @@ public:
 	UCameraComponent* GetCamera() const { return Camera; }
 
 	UFUNCTION(BlueprintPure)
-	USGWeaponComponent* GetWeaponComponent() const { return Weapon; }
+	USGWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 
 	template <class T>
-	T* GetWeaponComponent() const { return Cast<T>(Weapon); }
+	T* GetWeaponComponent() const { return Cast<T>(WeaponComponent); }
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, DisplayName="Set Weapon")
+	void ServerSetWeaponComponentClass(TSubclassOf<USGWeaponComponent> NewWeaponClass);
 
 	UFUNCTION(BlueprintPure)
 	USGBlindnessComponent* GetBlindnessComponent() const { return BlindnessComponent; }
@@ -104,8 +107,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	USkeletalMeshComponent* ThirdPersonWeaponMesh;
 
-	UPROPERTY(EditDefaultsOnly)
-	USGWeaponComponent* Weapon;
+	UPROPERTY(Replicated)
+	USGWeaponComponent* WeaponComponent;
 
 	UPROPERTY(EditDefaultsOnly)
 	USGBlindnessComponent* BlindnessComponent;
@@ -138,10 +141,10 @@ protected:
 	void MoveRight(const float Value) { AddMovementInput(GetActorRightVector(), Value); };
 
 	UFUNCTION(BlueprintCallable)
-	void FireWeapon() { Weapon->CosmeticFire(); }
+	void FireWeapon() { WeaponComponent->CosmeticFire(); }
 
 	UFUNCTION(BlueprintCallable)
-	void ReloadWeapon() { Weapon->CosmeticReload(); }
+	void ReloadWeapon() { WeaponComponent->CosmeticReload(); }
 
 	UFUNCTION(BlueprintCallable)
 	void UtilizeAbility();

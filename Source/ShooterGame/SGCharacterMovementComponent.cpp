@@ -92,7 +92,7 @@ void USGCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVe
 {
 	Super::OnMovementUpdated(DeltaTime, OldLocation, OldVelocity);
 
-	if (!CharacterOwner) return;
+	if (!IsValid(CharacterOwner)) return;
 
 	if (bWantsToDash) PerformDash();
 }

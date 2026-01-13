@@ -23,13 +23,7 @@ void USGLagCompensationComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (!Character->HasAuthority()) return;
-
-	if (WriteIndex >= SnapshotBuffer.Num()) WriteIndex = 0;
-
-	FSnapshot Snapshot = FSnapshot(GetWorld()->GetTimeSeconds(), Character->GetActorLocation());
-	Character->GetMesh()->SnapshotPose(Snapshot.Pose);
-	SnapshotBuffer[WriteIndex] = Snapshot;
-	WriteIndex++;
+	CaptureSnapshot();
 }
 
 FSnapshot USGLagCompensationComponent::GetClosestSnapshot(const float TargetTimestamp)
@@ -51,4 +45,13 @@ FSnapshot USGLagCompensationComponent::GetClosestSnapshot(const float TargetTime
 
 	if (SmallestTimestampDiff > SnapshotMaxValidDelay) return FSnapshot();
 	return SnapshotBuffer[ClosestSnapshotIndex];
+}
+
+void USGLagCompensationComponent::CaptureSnapshot()
+{
+	if (WriteIndex >= SnapshotBuffer.Num()) WriteIndex = 0;
+
+	const FSnapshot Snapshot = FSnapshot(GetWorld()->GetTimeSeconds(), Character->GetActorLocation());
+	SnapshotBuffer[WriteIndex] = Snapshot;
+	WriteIndex++;
 }

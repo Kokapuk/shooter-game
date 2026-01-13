@@ -125,15 +125,12 @@ void ASGVersusGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotat
 	check(IsValid(Character))
 	check(IsValid(PlayerState))
 
-	USGWeaponComponent* WeaponComponent = Character->GetWeaponComponent();
-	USGAbilityDataAsset* Ability = PlayerState->GetAbility();
-	check(IsValid(WeaponComponent))
+	const USGAbilityDataAsset* Ability = PlayerState->GetAbility();
 	check(IsValid(Ability))
 
 	USGTeamComponent* TeamComponent = NewObject<USGTeamComponent>(Character, TeamComponentClass);
 	TeamComponent->RegisterComponent();
 
-	WeaponComponent->ServerEquip(DefaultWeapon);
 	Character->ServerSetAbility(Ability);
 	TeamComponent->AuthSetTeam(PlayerState->GetTeam());
 }

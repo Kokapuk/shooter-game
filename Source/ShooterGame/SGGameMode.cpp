@@ -1,17 +1,45 @@
 #include "SGGameMode.h"
 
+#include "SGAbilityDataAsset.h"
 #include "SGCharacter.h"
 #include "SGGameInstance.h"
 #include "SGGameState.h"
 #include "SGPlayerController.h"
 #include "SGPlayerState.h"
 #include "SGSpectatorPawn.h"
+#include "SGWeaponComponent.h"
 #include "Camera/CameraComponent.h"
-
 
 ASGGameMode::ASGGameMode()
 {
 	bDelayedStart = true;
+	DefaultWeaponComponentClass = USGWeaponComponent::StaticClass();
+}
+
+void ASGGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation)
+{
+	Super::FinishRestartPlayer(NewPlayer, StartRotation);
+
+	ASGCharacter* Character = NewPlayer->GetPawn<ASGCharacter>();
+	if (!IsValid(Character)) return;
+
+	if (IsValid(DefaultWeaponComponentClass))
+	{
+		Character->ServerSetWeaponComponentClass(DefaultWeaponComponentClass);
+
+		if (IsValid(DefaultWeapon))
+		{
+			USGWeaponComponent* WeaponComponent = Character->GetWeaponComponent();
+			check(IsValid(WeaponComponent))
+
+			WeaponComponent->ServerEquip(DefaultWeapon);
+		}
+	}
+
+	if (IsValid(DefaultAbility))
+	{
+		Character->ServerSetAbility(DefaultAbility);
+	}
 }
 
 bool ASGGameMode::MustSpectate_Implementation(APlayerController* NewPlayerController) const

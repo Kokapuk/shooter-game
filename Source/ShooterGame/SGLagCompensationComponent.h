@@ -14,9 +14,6 @@ struct FSnapshot
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector ActorLocation;
-
-	UPROPERTY(BlueprintReadOnly)
-	FPoseSnapshot Pose;
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), DisplayName="Lag Compensation Component")
@@ -43,6 +40,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=32, ClamMax=256))
 	uint16 TargetTickrate;
+
+	void CaptureSnapshot();
 
 private:
 	UPROPERTY()

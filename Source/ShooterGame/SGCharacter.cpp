@@ -34,7 +34,7 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	CharacterMesh->SetRelativeLocation(FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight()));
 	CharacterMesh->SetOwnerNoSee(true);
 	CharacterMesh->SetGenerateOverlapEvents(true);
-
+	
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CharacterMesh);
 	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
@@ -58,8 +58,6 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	ThirdPersonWeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonGunMesh");
 	ThirdPersonWeaponMesh->SetOwnerNoSee(true);
 	ThirdPersonWeaponMesh->SetupAttachment(GetMesh());
-
-	Weapon = CreateDefaultSubobject<USGWeaponComponent>("Weapon");
 
 	BlindnessComponent = CreateDefaultSubobject<USGBlindnessComponent>("BlindnessComponent");
 
@@ -155,6 +153,20 @@ void ASGCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 	TargetCameraHeight = BaseEyeHeight;
 }
 
+void ASGCharacter::ServerSetWeaponComponentClass_Implementation(const TSubclassOf<USGWeaponComponent> NewWeaponClass)
+{
+	if (!IsValid(NewWeaponClass))
+	{
+		WeaponComponent->DestroyComponent();
+		return;
+	}
+
+	if (IsValid(WeaponComponent)) WeaponComponent->DestroyComponent();
+
+	WeaponComponent = NewObject<USGWeaponComponent>(this, NewWeaponClass);
+	WeaponComponent->RegisterComponent();
+}
+
 void ASGCharacter::ServerSetAbility_Implementation(const USGAbilityDataAsset* NewAbility)
 {
 	if (!IsValid(NewAbility))
@@ -181,8 +193,8 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	SetActorLocation(PlayerStart->GetActorLocation());
 	MultiReset();
 
-	check(IsValid(Weapon))
-	Weapon->AuthReset();
+	check(IsValid(WeaponComponent))
+	WeaponComponent->AuthReset();
 
 	check(IsValid(AbilityComponent))
 	AbilityComponent->AuthReset();

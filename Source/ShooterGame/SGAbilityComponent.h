@@ -7,7 +7,7 @@
 
 class USGAbilityDataAsset;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Abstract, DisplayName="Ability Component")
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Abstract, DisplayName="Ability Component", Blueprintable)
 class SHOOTERGAME_API USGAbilityComponent : public UActorComponent
 {
 	GENERATED_BODY()
