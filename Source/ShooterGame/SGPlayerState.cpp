@@ -2,7 +2,6 @@
 
 #include "SGCharacter.h"
 #include "SGGameState.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 void ASGPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -23,6 +22,12 @@ void ASGPlayerState::BeginPlay()
 	check(IsValid(GameState))
 
 	GameState->OnMatchBegin.AddUniqueDynamic(this, &ASGPlayerState::HandleMatchBegin);
+
+	if (HasAuthority())
+	{
+		GetWorldTimerManager().SetTimer(RTTCalculationTimerHandle, this, &ASGPlayerState::AuthUpdateRoundTripTime, 1.f,
+		                                true, 0.f);
+	}
 }
 
 void ASGPlayerState::ServerSetAbility_Implementation(USGAbilityDataAsset* NewAbility)
@@ -66,4 +71,20 @@ void ASGPlayerState::HandleDie(ASGPlayerState* Killer, ASGPlayerState* Victim, c
 		SetIsSpectator(true);
 		Deaths++;
 	}
+}
+
+void ASGPlayerState::AuthUpdateRoundTripTime()
+{
+	if (!HasAuthority()) return;
+	ClientUpdateRoundTripTime(GetWorld()->GetTimeSeconds());
+}
+
+void ASGPlayerState::ClientUpdateRoundTripTime_Implementation(const float Timestamp)
+{
+	ServerUpdateRoundTripTime(Timestamp);
+}
+
+void ASGPlayerState::ServerUpdateRoundTripTime_Implementation(const float Timestamp)
+{
+	RoundTripTime = GetWorld()->GetTimeSeconds() - Timestamp;
 }

@@ -34,7 +34,8 @@ ASGCharacter::ASGCharacter(const FObjectInitializer& ObjectInitializer)
 	CharacterMesh->SetRelativeLocation(FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight()));
 	CharacterMesh->SetOwnerNoSee(true);
 	CharacterMesh->SetGenerateOverlapEvents(true);
-	
+	CharacterMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CharacterMesh);
 	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
@@ -93,12 +94,14 @@ void ASGCharacter::BeginPlay()
 
 void ASGCharacter::Tick(float DeltaSeconds)
 {
-	Super::Tick(DeltaSeconds);
+	if (HasAuthority()) LagCompensationComponent->CaptureSnapshot();
 
 	const FVector NewCameraLocation = UKismetMathLibrary::VInterpTo(Camera->GetRelativeLocation(),
 	                                                                FVector(0.f, 0.f, TargetCameraHeight), DeltaSeconds,
 	                                                                10.f);
 	Camera->SetRelativeLocation(NewCameraLocation);
+
+	Super::Tick(DeltaSeconds);
 }
 
 bool ASGCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,

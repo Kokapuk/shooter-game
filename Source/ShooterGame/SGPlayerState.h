@@ -20,6 +20,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 
+	UFUNCTION(BlueprintCallable)
+	float GetRoundTripTime() const { return RoundTripTime; };
+
 	UFUNCTION(BlueprintPure)
 	ASGCharacter* GetCharacter() const { return Character; }
 
@@ -42,6 +45,9 @@ public:
 	int32 GetDeaths() const { return Deaths; }
 
 protected:
+	float RoundTripTime;
+	FTimerHandle RTTCalculationTimerHandle;
+
 	UPROPERTY(Replicated, VisibleInstanceOnly)
 	ASGCharacter* Character;
 
@@ -59,4 +65,12 @@ protected:
 
 	UFUNCTION()
 	void HandleDie(ASGPlayerState* Killer, ASGPlayerState* Victim, bool bIsHeadshot);
+
+	void AuthUpdateRoundTripTime();
+
+	UFUNCTION(Client, Reliable)
+	void ClientUpdateRoundTripTime(const float Timestamp);
+
+	UFUNCTION(Server, Reliable)
+	void ServerUpdateRoundTripTime(const float Timestamp);
 };
