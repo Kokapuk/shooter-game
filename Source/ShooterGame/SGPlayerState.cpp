@@ -25,7 +25,7 @@ void ASGPlayerState::BeginPlay()
 
 	if (HasAuthority())
 	{
-		GetWorldTimerManager().SetTimer(RTTCalculationTimerHandle, this, &ASGPlayerState::AuthUpdateRoundTripTime, 1.f,
+		GetWorldTimerManager().SetTimer(RTTCalculationTimerHandle, this, &ASGPlayerState::AuthUpdateRoundTripTime, 0.1f,
 		                                true, 0.f);
 	}
 }

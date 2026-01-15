@@ -2,8 +2,12 @@
 
 #include "SGCharacter.h"
 #include "SGGameUserSettings.h"
+#include "SGLagCompensationComponent.h"
+#include "SGPlayerState.h"
 #include "SGTracer.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Engine/TriggerCapsule.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -71,24 +75,75 @@ bool USGWeaponComponent::CanFire() const
 		bIsReloading;
 }
 
-FHitResult USGWeaponComponent::GetHitResult() const
+FHitResult USGWeaponComponent::LineTrace(const FVector& Direction, const TArray<AActor*>& ActorsToIgnore) const
 {
-	const ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
+	ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
 	check(IsValid(OwningCharacter))
 
 	const UCameraComponent* Camera = OwningCharacter->GetCamera();
 	check(IsValid(Camera))
 
-	const FVector End = Camera->GetComponentLocation() + GetFireDirection() * 35000.f;
+	const FVector End = Camera->GetComponentLocation() + Direction * 35000.f;
+
+	TArray<AActor*> FullActorsToIgnore = {OwningCharacter};
+	for (AActor* ActorToIgnore : ActorsToIgnore)
+	{
+		FullActorsToIgnore.Push(ActorToIgnore);
+	}
 
 	FHitResult HitResult;
-	UKismetSystemLibrary::LineTraceSingle(OwningCharacter, Camera->GetComponentLocation(), End,
+	UKismetSystemLibrary::LineTraceSingle(this, Camera->GetComponentLocation(), End,
 	                                      UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
 	                                      false,
-	                                      {}, EDrawDebugTrace::ForDuration, HitResult, true,
-	                                      FLinearColor::Red, FLinearColor::Green, .5f);
+	                                      FullActorsToIgnore, EDrawDebugTrace::ForDuration, HitResult,
+	                                      true,
+	                                      FLinearColor::Red, FLinearColor::Green, 5.f);
 
 	return HitResult;
+}
+
+bool USGWeaponComponent::ValidateHit(const FHitResult& HitResult) const
+{
+	const ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
+	check(IsValid(OwningCharacter))
+
+	const ASGPlayerState* OwningPlayerState = OwningCharacter->GetPlayerState<ASGPlayerState>();
+	check(IsValid(OwningPlayerState))
+
+	ASGCharacter* TargetCharacter = Cast<ASGCharacter>(HitResult.GetActor());
+	check(IsValid(TargetCharacter))
+
+	const UCapsuleComponent* CapsuleComponent = OwningCharacter->GetCapsuleComponent();
+	check(IsValid(CapsuleComponent))
+
+	const USGLagCompensationComponent* LagCompensationComponent = TargetCharacter->GetLagCompensationComponent();
+	check(IsValid(LagCompensationComponent))
+
+	const FSnapshot Snapshot = LagCompensationComponent->GetSnapshotForPlayer(OwningPlayerState);
+
+	UKismetSystemLibrary::DrawDebugCapsule(this, Snapshot.ActorLocation,
+	                                       CapsuleComponent->GetScaledCapsuleHalfHeight(),
+	                                       CapsuleComponent->GetScaledCapsuleRadius(), FRotator::ZeroRotator,
+	                                       FColor::Red, 5.f);
+
+	ATriggerCapsule* TriggerCapsule = GetWorld()->SpawnActorDeferred<ATriggerCapsule>(
+		ATriggerCapsule::StaticClass(), FTransform(Snapshot.ActorLocation));
+
+	UCapsuleComponent* CollisionComponent = Cast<UCapsuleComponent>(TriggerCapsule->GetCollisionComponent());
+	CollisionComponent->SetCapsuleSize(CapsuleComponent->GetScaledCapsuleRadius(),
+	                                   CapsuleComponent->GetScaledCapsuleHalfHeight(), false);
+	CollisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
+
+	TriggerCapsule->FinishSpawning(FTransform(Snapshot.ActorLocation));
+
+	const FVector Direction = (HitResult.ImpactPoint - HitResult.TraceStart).GetSafeNormal();
+	const FHitResult ValidatedHitResult = LineTrace(Direction, TArray<AActor*>{TargetCharacter});
+
+	const bool Validated = ValidatedHitResult.GetActor() == TriggerCapsule;
+	TriggerCapsule->Destroy();
+
+	return Validated;
 }
 
 void USGWeaponComponent::AuthResetRounds()
@@ -111,7 +166,17 @@ void USGWeaponComponent::CosmeticFire()
 	if (!HasAuthority()) TimeToFire = Equipped->TimeBetweenShots;
 	PlayFireAnimations();
 
-	const FHitResult HitResult = GetHitResult();
+	const FHitResult HitResult = LineTrace(GetFireDirection(), {});
+	
+	if (const ASGCharacter* Character = Cast<ASGCharacter>(HitResult.GetActor()))
+	{
+		const UCapsuleComponent* CapsuleComponent = Character->GetCapsuleComponent();
+		UKismetSystemLibrary::DrawDebugCapsule(this, Character->GetActorLocation(),
+										   CapsuleComponent->GetScaledCapsuleHalfHeight(),
+										   CapsuleComponent->GetScaledCapsuleRadius(), FRotator::ZeroRotator,
+										   FColor::Green, 5.f);
+	}
+	
 	ServerFire(HitResult);
 }
 
@@ -141,19 +206,30 @@ void USGWeaponComponent::ServerFire_Implementation(const FHitResult& HitResult)
 		                                       FireAnimationLength);
 	}
 
-	MultiFire(HitResult);
-
 	if (!HitResult.bBlockingHit) return;
-
 	AActor* HitActor = HitResult.GetActor();
-	if (!IsValid(HitActor) || !HitActor->CanBeDamaged()) return;
 
-	ASGCharacter* HitCharacter = Cast<ASGCharacter>(HitActor);
+	if (!IsValid(HitActor) || !HitActor->CanBeDamaged())
+	{
+		MultiFire(HitResult, false);
+		return;
+	}
+
+	const ASGCharacter* HitCharacter = Cast<ASGCharacter>(HitActor);
 
 	if (IsValid(HitCharacter))
 	{
+		if (!ValidateHit(HitResult))
+		{
+			MultiFire(HitResult, false);
+			return;
+		}
+
+		MultiFire(HitResult, true);
+
 		HitCharacter->MultiPlayHitReactMontage(HitResult.BoneName);
 	}
+	else MultiFire(HitResult, false);
 
 	ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
 	check(IsValid(OwningCharacter))
@@ -192,7 +268,7 @@ void USGWeaponComponent::AuthReset()
 	AuthResetRounds();
 }
 
-void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
+void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult, const bool bHitConfirmed)
 {
 	if (!IsLocallyControlled()) PlayFireAnimations();
 
@@ -201,11 +277,9 @@ void USGWeaponComponent::MultiFire_Implementation(const FHitResult& HitResult)
 		SpawnTracer(HitResult);
 	}
 
-	PlayImpactEffects(HitResult);
+	PlayImpactEffects(HitResult, bHitConfirmed);
 
-	const AActor* HitActor = HitResult.GetActor();
-
-	if (IsValid(HitActor) && HitActor->CanBeDamaged() && IsOwnerLocalViewTarget())
+	if (bHitConfirmed && IsOwnerLocalViewTarget())
 	{
 		PlayHitMarker();
 	}
@@ -321,19 +395,19 @@ void USGWeaponComponent::SpawnTracer(const FHitResult& HitResult) const
 	Tracer->FinishSpawning(Transform);
 }
 
-void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
+void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult, const bool bHitConfirmed) const
 {
 	check(IsValid(Equipped->BodyImpactCue))
 	check(IsValid(Equipped->SurfaceImpactCue))
 
 	const ASGCharacter* OwningCharacter = GetOwner<ASGCharacter>();
-	check(OwningCharacter)
+	check(IsValid(OwningCharacter))
 
 	const AActor* HitActor = HitResult.GetActor();
 	if (!IsValid(HitActor)) return;
 
 	UGameplayStatics::PlaySoundAtLocation(OwningCharacter,
-	                                      HitActor->CanBeDamaged()
+	                                      (bHitConfirmed && HitActor->CanBeDamaged())
 		                                      ? Equipped->BodyImpactCue
 		                                      : Equipped->SurfaceImpactCue, HitResult.Location);
 
@@ -344,7 +418,7 @@ void USGWeaponComponent::PlayImpactEffects(const FHitResult& HitResult) const
 
 	UParticleSystem* ImpactParticles;
 
-	if (HitActor->CanBeDamaged())
+	if (bHitConfirmed && HitActor->CanBeDamaged())
 	{
 		ImpactParticles = Equipped->BodyImpactParticles;
 	}

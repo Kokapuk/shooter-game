@@ -1,7 +1,6 @@
 #include "SGRouletteGameMode.h"
 
 #include "EngineUtils.h"
-#include "SGRouletteCharacter.h"
 #include "SGRouletteWeaponComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "ShooterGame/SGCharacter.h"
@@ -56,7 +55,7 @@ void ASGRouletteGameMode::StartMatch()
 {
 	Super::StartMatch();
 
-	for (TActorIterator<ASGRouletteCharacter> Character(GetWorld()); Character; ++Character)
+	for (TActorIterator<ASGCharacter> Character(GetWorld()); Character; ++Character)
 	{
 		USGWeaponComponent* Weapon = Character->GetWeaponComponent();
 		check(IsValid(Weapon))
@@ -81,17 +80,12 @@ void ASGRouletteGameMode::HandlePlayerKill(ASGPlayerState* Killer, ASGPlayerStat
 void ASGRouletteGameMode::GiveBulletToRandomCharacter()
 {
 	TArray<AActor*> Characters;
-	UGameplayStatics::GetAllActorsOfClass(this, ASGRouletteCharacter::StaticClass(), Characters);
-
-	if (Characters.Num() == 0)
-	{
-		return;
-	}
+	UGameplayStatics::GetAllActorsOfClass(this, ASGCharacter::StaticClass(), Characters);
+	
+	if (Characters.Num() == 0) return;
 
 	ShuffleActors(Characters);
-
-	const ASGRouletteCharacter* Character = Cast<ASGRouletteCharacter>(Characters[0]);
-	check(IsValid(Character))
+	const ASGCharacter* Character = Cast<ASGCharacter>(Characters[0]);
 
 	USGRouletteWeaponComponent* Weapon = Character->GetWeaponComponent<USGRouletteWeaponComponent>();
 	check(IsValid(Weapon))

@@ -138,7 +138,7 @@ TArray<ASGCharacter*> ASGSpectatorPawn::GetAliveCharacters() const
 	{
 		if (ActorIterator->IsDead()) continue;
 
-		AliveCharacters.Add(*ActorIterator);
+		AliveCharacters.Push(*ActorIterator);
 	}
 
 	return AliveCharacters;

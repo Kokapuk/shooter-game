@@ -209,7 +209,7 @@ void ASGCharacter::AuthReset(const AActor* PlayerStart)
 	DetailedCharacterMovement->AuthReset();
 }
 
-void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName)
+void ASGCharacter::MultiPlayHitReactMontage_Implementation(const FName& HitBoneName) const
 {
 	check(IsValid(HitReactMontage))
 

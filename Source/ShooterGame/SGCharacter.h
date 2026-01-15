@@ -89,7 +89,7 @@ public:
 	bool IsDead() const { return bIsDead; }
 
 	UFUNCTION(NetMulticast, Unreliable)
-	void MultiPlayHitReactMontage(const FName& HitBoneName);
+	void MultiPlayHitReactMontage(const FName& HitBoneName) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Reset")
 	void AuthReset(const AActor* PlayerStart);

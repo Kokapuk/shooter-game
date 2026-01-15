@@ -67,12 +67,12 @@ TArray<ASGVersusPlayerState*> ASGVersusGameState::GetPlayers() const
 
 	for (int32 i = 0; i < RedTeamPlayers.Num(); ++i)
 	{
-		AllPlayers.Add(RedTeamPlayers[i]);
+		AllPlayers.Push(RedTeamPlayers[i]);
 	}
 
 	for (int32 i = 0; i < BlueTeamPlayers.Num(); ++i)
 	{
-		AllPlayers.Add(BlueTeamPlayers[i]);
+		AllPlayers.Push(BlueTeamPlayers[i]);
 	}
 
 	return AllPlayers;
@@ -126,7 +126,7 @@ void ASGVersusGameState::AuthRegisterPlayerInTeam(ASGVersusPlayerState* Player, 
 		Spectators.Contains(Player) && Spectators.Remove(Player);
 
 		if (RedTeamPlayers.Contains(Player)) return;
-		RedTeamPlayers.Add(Player);
+		RedTeamPlayers.Push(Player);
 
 		break;
 	case ETeam::Blue:
@@ -134,7 +134,7 @@ void ASGVersusGameState::AuthRegisterPlayerInTeam(ASGVersusPlayerState* Player, 
 		Spectators.Contains(Player) && Spectators.Remove(Player);
 
 		if (BlueTeamPlayers.Contains(Player)) return;
-		BlueTeamPlayers.Add(Player);
+		BlueTeamPlayers.Push(Player);
 
 		break;
 	case ETeam::None:
@@ -142,7 +142,7 @@ void ASGVersusGameState::AuthRegisterPlayerInTeam(ASGVersusPlayerState* Player, 
 		BlueTeamPlayers.Contains(Player) && BlueTeamPlayers.Remove(Player);
 
 		if (Spectators.Contains(Player)) return;
-		Spectators.Add(Player);
+		Spectators.Push(Player);
 
 		break;
 	}
@@ -179,7 +179,7 @@ TArray<ASGPlayerState*> ASGVersusGameState::GetKillEventTargets() const
 
 	for (ASGPlayerState* Target : GetPlayers())
 	{
-		Targets.Add(Target);
+		Targets.Push(Target);
 	}
 
 	return Targets;

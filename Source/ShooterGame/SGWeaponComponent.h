@@ -72,13 +72,15 @@ protected:
 	bool CanFire() const;
 	
 	UFUNCTION(BlueprintPure)
-	FHitResult GetHitResult() const;
+	FHitResult LineTrace(const FVector& Direction, const TArray<AActor*>& ActorsToIgnore) const;
 
-	UFUNCTION(Server, Unreliable)
+	bool ValidateHit(const FHitResult& HitResult) const;
+
+	UFUNCTION(Server, Reliable)
 	void ServerFire(const FHitResult& HitResult);
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void MultiFire(const FHitResult& HitResult);
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiFire(const FHitResult& HitResult, const bool bHitConfirmed);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, DisplayName="Reset Rounds")
 	virtual void AuthResetRounds();
@@ -97,7 +99,7 @@ protected:
 
 	void PlayFireAnimations() const;
 	void SpawnTracer(const FHitResult& HitResult) const;
-	void PlayImpactEffects(const FHitResult& HitResult) const;
+	void PlayImpactEffects(const FHitResult& HitResult, const bool bHitConfirmed) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, DisplayName="Play Hit Marker")
 	void PlayHitMarker() const;

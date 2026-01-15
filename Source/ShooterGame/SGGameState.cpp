@@ -54,7 +54,7 @@ TArray<ASGPlayerState*> ASGGameState::GetKillEventTargets() const
 			continue;
 		}
 		
-		Targets.Add(*Target);
+		Targets.Push(*Target);
 	}
 
 	return Targets;

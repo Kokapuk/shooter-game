@@ -3,37 +3,7 @@
 #include "SGLagCompensationComponent.generated.h"
 
 class ASGCharacter;
-
-UENUM(BlueprintType)
-enum class EHitboxType : uint8
-{
-	Box,
-	Capsule,
-};
-
-USTRUCT(BlueprintType)
-struct FSkeletonHitbox
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly)
-	FName Name;
-
-	UPROPERTY(BlueprintReadOnly)
-	FTransform Transform;
-
-	UPROPERTY(BlueprintReadOnly)
-	EHitboxType Type;
-
-	UPROPERTY(BlueprintReadOnly)
-	FVector BoxExtents;
-
-	UPROPERTY(BlueprintReadOnly)
-	float Radius;
-
-	UPROPERTY(BlueprintReadOnly)
-	float HalfHeight;
-};
+class ASGPlayerState;
 
 USTRUCT(BlueprintType)
 struct FSnapshot
@@ -45,9 +15,6 @@ struct FSnapshot
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector ActorLocation;
-
-	UPROPERTY(BlueprintReadOnly)
-	TArray<FSkeletonHitbox> Hitboxes;
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), DisplayName="Lag Compensation Component")
@@ -59,8 +26,6 @@ public:
 	USGLagCompensationComponent();
 
 	virtual void BeginPlay() override;
-	// virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	//                            FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintPure)
 	int32 GetSnapshotBufferSize() const { return TargetTickrate * (SnapshotMaxValidDelay / 1000.f); }
@@ -69,7 +34,10 @@ public:
 	void CaptureSnapshot();
 
 	UFUNCTION(BlueprintPure)
-	FSnapshot GetClosestSnapshot(const float TargetTimestamp);
+	FSnapshot GetClosestSnapshot(const float TargetTimestamp) const;
+
+	UFUNCTION(BlueprintPure)
+	FSnapshot GetSnapshotForPlayer(const ASGPlayerState* Player) const;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=0, ClamMax=1000))
@@ -77,8 +45,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, meta=(ClampMin=32, ClamMax=256))
 	uint16 TargetTickrate;
-
-	TArray<FSkeletonHitbox> CaptureSkeletonHitboxes();
 
 private:
 	UPROPERTY()
