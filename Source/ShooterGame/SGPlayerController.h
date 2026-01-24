@@ -24,7 +24,7 @@ public:
 
 protected:
 	UFUNCTION(BlueprintCallable)
-	void SetMouseSensitivity(float Value);
+	void SetMouseSensitivity(float Value) {MouseSensitivity = Value;}
 
 private:
 	float MouseSensitivity;

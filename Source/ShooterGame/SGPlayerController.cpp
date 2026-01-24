@@ -17,8 +17,3 @@ void ASGPlayerController::ClientResetControlRotation_Implementation(const FRotat
 {
 	SetControlRotation(NewRotation);
 }
-
-void ASGPlayerController::SetMouseSensitivity(float Value)
-{
-	MouseSensitivity = Value;
-}

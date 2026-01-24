@@ -13,11 +13,8 @@ class USGBlindnessComponent;
 class USGWeaponComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
-class USceneComponent;
 class UCameraComponent;
-class UMotionControllerComponent;
 class UAnimMontage;
-class USoundBase;
 
 DECLARE_DELEGATE_OneParam(FCrouchDelegate, bool);
 
